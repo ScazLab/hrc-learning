@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 import os
 import argparse
@@ -339,18 +339,25 @@ class QController(BaseController):
         self.human_input = data.data
 
     # returns the index of one of the maxes in a list, chosen randomly
-    def rand_idx_max(lst):
+    def rand_idx_max(self, lst):
         m = max(lst)
         l = [i for i, v in enumerate(lst) if v == m]
         return random.choice(l)
+        
+    # returns the index of one of the positive values in a list, chosen randomly. If no positive values, choose randomly.
+    def rand_idx_noneg(self, lst):
+        l = [i for i, v in enumerate(lst) if v >= 0]
+        if l == []:
+            print("Warning: rand_idx_noneg picking from list with no non-negative values")
+            return randrange(len(lst))
+        return random.choice(l)
 
-    def exploitexplore(options, e):
-        # !! i could improve this by having the 'explore' option only explore possibilities that are non-negative, so it doesn't retread invalid moves
+    def exploitexplore(self, options, e):
         r = random.random()
         if r > e:
-            return self.rand_idx_max(options) # Exploit: pick (one of) the best
+            return self.rand_idx_max(options)   # Exploit: pick (one of) the best
         else:
-            return random.randrange(len(options)) # Explore: pick randomly
+            return self.rand_idx_noneg(options) # Explore: pick one of the nonnegative options (so as not to retread invalid moves). Could also just pick one of the zero (unexplored) options
 
     # Full program
     def _run(self):
@@ -359,14 +366,18 @@ class QController(BaseController):
         throwaway = self.prep_model()
             
         print("Starting learning iterations...")
-        Q = [[-1 for j in range(NACTIONS)] for i in range(NSTATES)] # Initialize matrix Q to 0s
+        Q = [[0 for j in range(NACTIONS)] for i in range(NSTATES)] # Initialize matrix Q to 0s
         trial = 0
 
         while (True):    # keep running trials until user says to stop
-            greenlight = input("Ready to start new trial. Continue? (enter 'y' to run a trial, anything else to quit)")
+            greenlight = raw_input("Ready to start new trial. Continue? (enter 'y' to run a trial, anything else to quit)")
             if greenlight != 'y':
                 break
 
+
+            self.take_action('hold')
+            
+            
             # begin trial
             trial = trial + 1
             eps = max(0.1, 1/(trial+1))
@@ -374,31 +385,34 @@ class QController(BaseController):
 
             while (current_state != ENDSTATE):
                 # begin one state-action step
-                action = self.name_action(self.exploitexplore(Q[current_state], eps)) # 2. Use existing Q matrix to pick an action (exploit-explore)
+                actionid = self.exploitexplore(Q[current_state], eps)  # 2. Use existing Q matrix to pick an action (exploit-explore)
+                action = self.name_action(actionid)                     # string name of action
                 # !! maybe should use state update behavior in complete_robot_action instead of simple take_action
                 green, obj_taken_idx = self.take_action(action) # 3. Perform action up until human feedback
 
                 if green:       # success
-                    next_state = T[current_state][action]
-                    self.update_obj_state(green, action, object_action_idx) # assuming this updates mental map of what's on the table. I can maybe replace it with T matrix
+                    next_state = self.T[current_state][actionid]              # use T matrix to know next state. Equivalent of dead reckoning obj_state system. Better practice might be to put this T matrix in another file
+#                    self.update_obj_state(green, action, object_action_idx) # assuming this updates mental map of what's on the table. I can maybe replace it with T matrix
                 
                     if next_state == -1:
                         print("ERROR: Human accepted invalid action")
+                        exit()
                         # !! in the future I could maybe eliminate T matrix and use the existing obj state infrastructure to keep track. But not central to project
                     
                     reward = 10 # !! replace with nuanced reward from user
                     # Update Q matrix with positive reward
-                    Q[current_state][action] = reward + GAMMA * (max(Q[next_state]) if next_state != -1 else -1) # !!! -1 case in here could mask errors
+                    Q[current_state][actionid] = reward + GAMMA * (max(Q[next_state]) if next_state != -1 else -1) # !!! -1 case in here could mask errors
 
                     current_state = next_state
-                else:
+                else:           # failure
                     print("Red button or grasper error")
                     # do not update state model or move through T matrix
                     reward = -1
-                    Q[current_state][action] = reward # no account for future because there is no future after an invalid move
+                    Q[current_state][actionid] = reward # no account for future because there is no future after an invalid move
 
                 print("done with state-action step")
-
+                print(Q)
+                
             print("done with trial (reached end state)")
 
         print("done with all trials (user decided to quit). Rospy signal shutdown")
@@ -742,11 +756,12 @@ class QController(BaseController):
                 obj = 'dowel_'+str(obj_taken_idx)
                 [(side, obj_idx), exists] = self.OBJECT_IDX[obj]
                 print("AAAAAAAAAAAAAAAAAAAAAAAAAAAA ")
-                print(self.last_brought)
-                if self.last_brought['back'] == 1 or self.last_brought['long_dowel'] == 1:
-                    r = self._action(BaseController.RIGHT, (self.HOLD_TOP, [obj_idx]), {'wait': True})
-                else:
-                    r = self._action(BaseController.RIGHT, (self.HOLD_LEG, [obj_idx]), {'wait': True})
+               # print(self.last_brought)
+               # if self.last_brought['back'] == 1 or self.last_brought['long_dowel'] == 1:
+               #     r = self._action(BaseController.RIGHT, (self.HOLD_TOP, [obj_idx]), {'wait': True})
+               # else:
+               #     r = self._action(BaseController.RIGHT, (self.HOLD_LEG, [obj_idx]), {'wait': True})
+                r = self._action(BaseController.RIGHT, (self.HOLD_LEG, [obj_idx]), {'wait': True})    # simple hold
             elif action == 'br_seat':
                 obj_taken_idx = 1
                 obj = action[3:]+'_'+str(obj_taken_idx)
@@ -798,3 +813,10 @@ if __name__ == '__main__':
     # rospy.init_node('HM`MBernPredsController')
     controller.time_step = 0
     controller.run()
+    
+    
+    
+    
+# Problems:
+# 1. Error 'NoneType' object has no attribute '__getitem__'     whenevber it tries to choose 'hold'
+# 2. Robot seems to get stuck in kinked up right arm position

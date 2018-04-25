@@ -399,13 +399,33 @@ Reward   | Input
 4 (++++) | 4 green pushes
 etc
 
-
+An improvement for flexibility would be to make the T and Q matrices dictionaries instead that map a binary key (representing objects in workspace) to Q values (or to other binary keys)
+That way it is totally up to the user what moves are preferred, acceptable, and unacceptable
+The presentation is that the user has the option to work with the robot's action with a range of approval, or to totally reject it and demand that the robot try a different move and never do that same move in that particular situation again.
+Acceptance with low approval will be subsumed by high-approval options
 
 
 
 
 using Baxter
 -----------
+
+
+~~~terminal in ros_devel_ws~~~
+./baxter.sh
+untuck
+roslaunch hrc_learning hrc_learning.launch
+~~~~~~~~~new terminal~~~~~~~~~
+./baxter.sh
+rosrun hrc_learning controller.py
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+WHEN CONTROLLER IS NOT FOUND OR NOT EXECUTABLE
+1. chmod +x controller.py
+2. LINUX-STYLE LINE ENDINGS (shebang not read correctly)
+3. (maybe) rebuild catkin package (make sure to only build mine, not everyone's). Seems to not be necessary at least after changing line endings
+
 
 Log into scazlab
 password is baxter
@@ -429,7 +449,6 @@ Do need [package name].launch
 Mimic corina's launch file. Has dependencies for controller and object IDs. Has rosbridge websocket (necessary) and text-to-speech (not so necessary) dependencies too. Might just be ok copy pasting that file wholesale
 Don't need models.
 
-<<<<<<<<<got to here 15:52 4/6/18>>>>>>>>>>>>>
 First thing is to turn on robot (white power button on back)
 home/corina_local has commands.txt as a cheat sheet for sending commands
 Always cd into ros_devel_ws

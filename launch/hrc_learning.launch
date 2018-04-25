@@ -1,0 +1,67 @@
+<launch>
+    <!-- ARUCO -->
+    <include file="$(find human_robot_collaboration)/launch/baxter_aruco.launch">
+        <arg name="arm" value= "left" />
+    </include>
+    <include file="$(find human_robot_collaboration)/launch/baxter_aruco.launch">
+        <arg name="arm" value="right" />
+    </include>
+
+    <!-- ROSBRIDGE -->
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
+
+    <!-- Objects database for the left arm -->
+    <rosparam param = "action_provider/objects_left">
+        "seat"       : 198
+        "chair_back" : 201
+        "leg_1"      : 150
+        "leg_2"      : 151
+        "leg_3"      : 152
+        "leg_4"      : 153
+        "leg_5"      : 154
+        "leg_6"      : 155
+        "leg_7"      : 156
+    </rosparam>
+
+    <!-- Objects database for the right arm -->
+    <rosparam param = "action_provider/objects_right">
+        "foot_1"        : 10
+        "foot_2"        : 11
+        "foot_3"        : 12
+        "foot_4"        : 13
+        "front_1"       : 14
+        "front_2"       : 15
+        "top_1"         : 16
+        "top_2"         : 17
+        "back_1"        : 18
+        "back_2"        : 19
+        "screwdriver_1" : 20
+        "front_3"       : 22
+        "front_4"       : 23
+    </rosparam>
+
+    <!-- CONTROL -->
+    <!-- If the system should use the robot or not (useful for debugging) -->
+    <arg name="use_robot" default="true"/>
+    <param name="action_provider/use_robot" value="$(arg use_robot)"/>
+    <!-- If the system should internally recover from error -->
+    <arg name="internal_recovery" default="true"/>
+    <param name="action_provider/internal_recovery" value="$(arg internal_recovery)"/>
+    <!-- print level (shared throughout the control code) -->
+    <arg name="print_level" default="2"/>
+    <param name="print_level" value="$(arg print_level)" />
+
+    <node pkg="human_robot_collaboration" type="sp_pred_action_provider" name="sp_pred_action_provider" output="screen">
+        <remap from="/markers/left"  to="/baxter_aruco_left/markers"/>
+        <remap from="/markers/right" to="/baxter_aruco_right/markers"/>
+    </node>
+
+    <!-- VISUALIZATION & MISC -->
+    <!-- Parameter for speech pop up duration -->
+    <param name="baxter_display/speech_duration"        value="16.0"/>
+
+    <node pkg="human_robot_collaboration" type="baxter_display"    name="baxter_display"  output="screen"/>
+
+    <!-- Text to Speech -->
+    <include file="$(find svox_tts)/launch/svox_tts.launch" />
+</launch>

@@ -333,7 +333,6 @@ class QController(BaseController):
     #     rospy.Subscriber(self.OBS_TALKER, numpy_msg(Floats), self.take_action)
     #     rospy.spin()
 
-    # don't need web interface
     def web_interface_callback(self, data):
         rospy.loginfo(rospy.get_caller_id() + "I heard %s ", data.data)
         self.human_input = data.data
@@ -399,7 +398,12 @@ class QController(BaseController):
                         exit()
                         # !! in the future I could maybe eliminate T matrix and use the existing obj state infrastructure to keep track. But not central to project
                     
-                    reward = 10 # !! replace with nuanced reward from user
+                    # reward = 10
+                    reward = self.human_feedback()
+                    if reward == 0:
+                        print("Error: web feedback gave 0")
+                        exit()
+                        
                     # Update Q matrix with positive reward
                     Q[current_state][actionid] = reward + GAMMA * (max(Q[next_state]) if next_state != -1 else -1) # !!! -1 case in here could mask errors
 
@@ -496,22 +500,28 @@ class QController(BaseController):
     # human to take any action online
     # use html page in folder to put my own buttons in
     # ! reponses published on a channel (continuously read)
-    def human_complete_action(self):
-        raw_input("Take human action...")
+    def human_feedback(self):
+        raw_input("Give human feedback...")
         self.human_input = None
-        actions_requested = []
-        while self.human_input != 'next': # ! whatever string is on the button that you pressed
+        rating = 0
+        
+        while self.human_input == None: # wait until meaningful input
             rospy.Subscriber(self.WEB_INTERFACE, String, self.web_interface_callback)
-            print("got human_input ", self.human_input)
-            if self.human_input != None and 'br_'+self.human_input in self.task_def.SUPP_BHVS.keys() \
-            and 'br_'+self.human_input not in actions_requested: # ! check for redundancy because channel
-                actions_requested.append('br_'+self.human_input)
-            if self.human_input == 'hold' and self.human_input not in actions_requested:
-                actions_requested.append(self.human_input)
             rospy.rostime.wallsleep(0.5)
-        print("got human_input next ")
-        print("JUST FINISHED PREDICTION FOR TIME STEP ", self.time_step)
-        return actions_requested # ! builds an array of button inputs ending when the human presses next
+        if self.human_input != 'error':
+            rating = self.human_input
+        
+      #  while self.human_input != 'next': # ! whatever string is on the button that you pressed
+      #      rospy.Subscriber(self.WEB_INTERFACE, String, self.web_interface_callback)
+      #      print("got human_input ", self.human_input)
+      #      if self.human_input != None and 'br_'+self.human_input in self.task_def.SUPP_BHVS.keys() \
+      #      and 'br_'+self.human_input not in actions_requested: # ! check for redundancy because channel
+      #          actions_requested.append('br_'+self.human_input)
+      #      if self.human_input == 'hold' and self.human_input not in actions_requested:
+      #          actions_requested.append(self.human_input)
+      #      rospy.rostime.wallsleep(0.5)
+        print("got human_input rating")
+        return rating
 
     def complete_robot_action(self, action):
         action_taken = 0

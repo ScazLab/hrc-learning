@@ -1,0 +1,396 @@
+States/Leaves
+-------------
+HTM:
+                             chair task
+                         ________||________
+                        /                  \
+              build_seat                    build_back
+             _____->_______                    _->_____________
+            /      |       \                  /        \       \
+   gather_legs  grab_seat  ass_seat   gather_sides  grab_back  ass_back
+       ||                                  ||
+gL0 gL1 gL2 gL3                         gS0 gS1
+
+
+My preferences:
+I want back first
+When getting back parts, I want top brackets before dowels
+When getting legs, I want brackets before dowels and back brackets before front brackets
+
+	HTM has ten leaves:
+	0. gL0 - grab dowel, grab front bracket
+	1. gL1 - grab dowel, grab front bracket
+	2. gL2 - grab dowel, grab back bracket
+	3. gL3 - grab dowel, grab back bracket
+	4. grab_seat - grab seat
+	5. ass_seat - hold [leg subassembly]
+	6. gs0 - grab dowel, grab top bracket
+	7. gs1 - grab dowel, grab top bracket
+	8. grab_back - grab long dowel, grab back
+	9. ass_back - hold [back subassembly]
+
+	Robot has no knowledge of the HTM nor any internal representation of leaves.
+
+	Parts:
+	-----
+	Dowel 0
+	Dowel 1
+	Dowel 2
+	Dowel 3
+	Front bracket 0
+	Front bracket 1
+	Back bracket 0
+	Back bracket 1
+	Seat
+	Seat subassembly
+	Top bracket 0
+	Top bracket 1
+	Long dowel
+	Back
+	Back subassembly
+	Chair
+
+These are the parts that the robot could reasonably see with computer vision.
+Their presence or absence on table are the only inputs it will be able to get from the environment.
+There are 6 dowels total but only 4 can be individually on table at once, so we only go up to 4.
+
+Leaves are vectors of parts on the table (there or not there)
+Leaves are sparse, because we are only dealing with the states that are reachable within the HTM
+(eg. we'd never have long dowel, seat, and dowel on the table)
+There is no binary counting (for dowels) b/c would only save 1 bit; every bit is just presence or absence of part.
+
+Leaf bitmap:
+		[ 15| 14| 13| 12| 11| 10| 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 ]
+		[ d0| d1| d2| d3|fb0|fb1|bb0|bb1| s | ss|tb0|tb1| ld| b | bs| c ]
+States:
+	0	[ 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	nothing
+
+	1	[ 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	1 dowel
+	2	[ 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	1 fb
+	3	[ 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	1 bb
+	4	[ 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	1 dowel, 1 fb
+	5	[ 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	1 dowel, 1 bb
+	6	[ 1 | 1 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	2 dowel, 1 fb
+	7	[ 1 | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	2 dowel, 1 bb
+	8	[ 1 | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	1 dowel, 2 fb
+	9	[ 1 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	1 dowel, 2 bb
+	10	[ 1 | 0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	1 dowel, 1 fb, 1 bb
+	11	[ 1 | 1 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	2 dowel, 2 fb
+	12	[ 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	2 dowel, 2 bb
+	13	[ 1 | 1 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	2 dowel, 1 fb, 1 bb
+	14	[ 1 | 1 | 1 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	3 dowel, 2 fb
+	15	[ 1 | 1 | 1 | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	3 dowel, 2 bb
+	16	[ 1 | 1 | 1 | 0 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	3 dowel, 1 fb, 1 bb
+	17	[ 1 | 1 | 0 | 0 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	2 dowel, 2 fb, 1 bb
+	18	[ 1 | 1 | 0 | 0 | 1 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	2 dowel, 1 fb, 2 bb
+	19	[ 1 | 1 | 1 | 0 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	3 dowel, 2 fb, 1 bb
+	20	[ 1 | 1 | 1 | 0 | 1 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	3 dowel, 1 fb, 2 bb
+	21	[ 1 | 1 | 1 | 1 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	4 dowel, 2 fb, 1 bb
+	22	[ 1 | 1 | 1 | 1 | 1 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	4 dowel, 1 fb, 2 bb
+	23	[ 1 | 1 | 1 | 0 | 1 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	3 dowel, 2 fb, 2 bb
+	24	[ 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	4 dowel, 2 fb, 2 bb
+	25	[ 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	4 dowel, 2 fb, 2 bb, seat
+	26	[ 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 ]	seat subassembly
+
+	1	[ 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	1 dowel (same as above)
+	27	[ 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 ]	1 tb
+	28	[ 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 ]	1 dowel, 1 tb
+	29	[ 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 ]	1 dowel, 2 tb
+	30	[ 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 ]	2 dowel, 1 tb
+	31	[ 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 ]	2 dowel, 2 tb
+	32	[ 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 1 | 0 | 0 | 0 ]	2 dowel, 2 tb, ld
+	33	[ 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 0 | 1 | 0 | 0 ]	2 dowel, 2 tb, back
+	34	[ 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 1 | 1 | 0 | 0 ]	2 dowel, 2 tb, ld, back
+	35	[ 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 ]	back subassembly
+
+  36:60	[ - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - ]	back subassembly + seat assembly states 
+  61:69	[ - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - ]	seat subassembly + back assembly states
+
+	70	[ 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 ]	chair
+
+71 total states
+Each of these states has 1 or more acceptable actions implicitly associated with it
+No bs + ss state because ss + all bs parts or vice versa jump to completed chair in a single hold
+
+
+
+Actions
+-------
+0. grab dowel
+1. grab front bracket
+2. grab back bracket
+3. grab seat
+4. grab top bracket
+5. grab long dowel
+6. grab back
+7. hold
+
+Reward Matrix
+-------------
+This basically ecnodes the logic behind the participant learning test on Corina's whiteboard
+Rows are states, columns are actions
+
+
+~~~~~~~~~~~~~~~~~~~~~ HTM-DRIVEN REWARDS (NO PREFERENCES) (S,A --> R) ~~~~~~~~~~~~~~~~~~~~~~~~
+
+								dl  fb  bb  st  tb  ld  bk  hd
+							----------------------------------
+0	nothing					:	10, 10, 10, -1, 10, -1, -1, -1
+1	1 dowel					:	-1, 10, 10, -1, 10, -1, -1, -1	v----- seat in progress -----v
+2	1 fb 					:	10, -1, -1, -1, -1, -1, -1, -1
+3	1 bb 					:	10, -1, -1, -1, -1, -1, -1, -1
+4	1 dl, 1 fb 				:	10, 10, 10, -1, -1, -1, -1, -1
+5	1 dl, 1 bb 				:	10, 10, 10, -1, -1, -1, -1, -1
+6	2 dl, 1 fb 				:	-1, 10, 10, -1, -1, -1, -1, -1
+7	2 dl, 1 bb 				:	-1, 10, 10, -1, -1, -1, -1, -1
+8	1 dl, 2 fb 				:	10, -1, -1, -1, -1, -1, -1, -1
+9	1 dl, 2 bb 				:	10, -1, -1, -1, -1, -1, -1, -1
+10	1 dl, 1 fb, 1 bb 		:	10, -1, -1, -1, -1, -1, -1, -1
+11	2 dl, 2 fb 				:	10, -1, 10, -1, -1, -1, -1, -1
+12	2 dl, 2 bb 				:	10, 10, -1, -1, -1, -1, -1, -1
+13	2 dl, 1 fb, 1 bb 		:	10, 10, 10, -1, -1, -1, -1, -1
+14	3 dl, 2 fb 				:	-1, -1, 10, -1, -1, -1, -1, -1
+15	3 dl, 2 bb 				:	-1, 10, -1, -1, -1, -1, -1, -1
+16	3 dl, 1 fb, 1 bb 		:	-1, 10, 10, -1, -1, -1, -1, -1
+17	2 dl, 2 fb, 1 bb 		:	10, -1, -1, -1, -1, -1, -1, -1
+18	2 dl, 1 fb, 2 bb 		:	10, -1, -1, -1, -1, -1, -1, -1
+19	3 dl, 2 fb, 1 bb 		:	10, -1, 10, -1, -1, -1, -1, -1
+20	3 dl, 1 fb, 2 bb 		:	10, 10, -1, -1, -1, -1, -1, -1
+21	4 dl, 2 fb, 1 bb 		:	-1, -1, 10, -1, -1, -1, -1, -1
+22	4 dl, 1 fb, 2 bb 		:	-1, 10, -1, -1, -1, -1, -1, -1
+23	3 dl, 2 fb, 2 bb 		:	10, -1, -1, -1, -1, -1, -1, -1
+24	4 dl, 2 fb, 2 bb 		:	-1, -1, -1, 10, -1, -1, -1, -1
+25	4 dl, 2 fb, 2 bb, st 	:	-1, -1, -1, -1, -1, -1, -1, 10
+26	seat subassembly		:	10, -1, -1, -1, 10, -1, -1, -1	^------------------------------^
+27	1 tb 					:	10, -1, -1, -1, -1, -1, -1, -1	v------ back in progress ------v
+28	1 dl, 1 tb 				:	10, -1, -1, -1, 10, -1, -1, -1
+29	1 dl, 2 tb 				:	10, -1, -1, -1, -1, -1, -1, -1
+30	2 dl, 1 tb 				:	-1, -1, -1, -1, 10, -1, -1, -1
+31	2 dl, 2 tb 				:	-1, -1, -1, -1, -1, 10, 10, -1
+32	2 dl, 2 tb, ld 			:	-1, -1, -1, -1, -1, -1, 10, -1
+33	2 dl, 2 tb, bk 			:	-1, -1, -1, -1, -1, 10, -1, -1
+34	2 dl, 2 tb, ld, bk 		:	-1, -1, -1, -1, -1, -1, -1, 10
+35	back subassembly 		:	10, 10, 10, -1, -1, -1, -1, -1	^------------------------------^
+36	bs, 1 dl				:	-1, 10, 10, -1, -1, -1, -1, -1	v------ back subassembly + seat in progress ------v
+37	bs, 1 fb 				:	10, -1, -1, -1, -1, -1, -1, -1
+38	bs, 1 bb 				:	10, -1, -1, -1, -1, -1, -1, -1
+39	bs, 1 dl, 1 fb 			:	10, 10, 10, -1, -1, -1, -1, -1
+40	bs, 1 dl, 1 bb 			:	10, 10, 10, -1, -1, -1, -1, -1
+41	bs, 2 dl, 1 fb 			:	-1, 10, 10, -1, -1, -1, -1, -1
+42	bs, 2 dl, 1 bb 			:	-1, 10, 10, -1, -1, -1, -1, -1
+43	bs, 1 dl, 2 fb 			:	10, -1, -1, -1, -1, -1, -1, -1
+44	bs, 1 dl, 2 bb 			:	10, -1, -1, -1, -1, -1, -1, -1
+45	bs, 1 dl, 1 fb, 1 bb 	:	10, -1, -1, -1, -1, -1, -1, -1
+46	bs, 2 dl, 2 fb 			:	10, 10, 10, -1, -1, -1, -1, -1
+47	bs, 2 dl, 2 bb 			:	10, 10, 10, -1, -1, -1, -1, -1
+48	bs, 2 dl, 1 fb, 1 bb 	:	10, 10, 10, -1, -1, -1, -1, -1
+49	bs, 3 dl, 2 fb 			:	-1, -1, 10, -1, -1, -1, -1, -1
+50	bs, 3 dl, 2 bb 			:	-1, 10, -1, -1, -1, -1, -1, -1
+51	bs, 3 dl, 1 fb, 1 bb 	:	-1, 10, 10, -1, -1, -1, -1, -1
+52	bs, 2 dl, 2 fb, 1 bb 	:	10, -1, -1, -1, -1, -1, -1, -1
+53	bs, 2 dl, 1 fb, 2 bb 	:	10, -1, -1, -1, -1, -1, -1, -1
+54	bs, 3 dl, 2 fb, 1 bb 	:	10, -1, 10, -1, -1, -1, -1, -1
+55	bs, 3 dl, 1 fb, 2 bb 	:	10, 10, -1, -1, -1, -1, -1, -1
+56	bs, 4 dl, 2 fb, 1 bb 	:	-1, -1, 10, -1, -1, -1, -1, -1
+57	bs, 4 dl, 1 fb, 2 bb 	:	-1, 10, -1, -1, -1, -1, -1, -1
+58	bs, 3 dl, 2 fb, 2 bb 	:	10, -1, -1, -1, -1, -1, -1, -1
+59	bs, 4 dl, 2 fb, 2 bb 	:	-1, -1, -1, 10, -1, -1, -1, -1
+60	bs, 4 dl, 2 fb, 2 bb, st:	-1, -1, -1, -1, -1, -1, -1, 10	^-------------------------------------------------^
+61	ss, 1 dl 				:	-1, -1, -1, -1, 10, -1, -1, -1	v------ seat subassembly + back in progress ------v
+62	ss, 1 tb 				:	10, -1, -1, -1, -1, -1, -1, -1
+63	ss, 1 dl, 1 tb 			:	10, -1, -1, -1, 10, -1, -1, -1
+64	ss, 1 dl, 2 tb 			:	10, -1, -1, -1, -1, -1, -1, -1
+65	ss, 2 dl, 1 tb 			:	-1, -1, -1, -1, 10, -1, -1, -1
+66	ss, 2 dl, 2 tb 			:	-1, -1, -1, -1, -1, 10, 10, -1
+67	ss, 2 dl, 2 tb, ld 		:	-1, -1, -1, -1, -1, -1, 10, -1
+68	ss, 2 dl, 2 tb, bk 		:	-1, -1, -1, -1, -1, 10, -1, -1
+69	ss, 2 dl, 2 tb, ld, bk	:	-1, -1, -1, -1, -1, -1, -1, 10	^-------------------------------------------------^
+70	chair 					:	-1, -1, -1, -1, -1, -1, -1, -1
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PREFERENCE-DRIVEN REWARDS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+My preferences:
+I want to do back subassembly first, and I want back before long dowel
+When getting back parts, I want top brackets before dowels
+When getting legs, I want brackets before dowels and back brackets before front brackets
+
+								dl  fb  bb  st  tb  ld  bk  hd
+							----------------------------------
+0	nothing					:	 1,  3,  3, -1, 10, -1, -1, -1
+1	1 dowel					:	-1,  1,  3, -1, 10, -1, -1, -1	v----- seat in progress -----v
+2	1 fb 					:	10, -1, -1, -1, -1, -1, -1, -1
+3	1 bb 					:	10, -1, -1, -1, -1, -1, -1, -1
+4	1 dl, 1 fb 				:	 3,  5, 10, -1, -1, -1, -1, -1
+5	1 dl, 1 bb 				:	 3,  5, 10, -1, -1, -1, -1, -1
+6	2 dl, 1 fb 				:	-1,  5, 10, -1, -1, -1, -1, -1
+7	2 dl, 1 bb 				:	-1,  5, 10, -1, -1, -1, -1, -1
+8	1 dl, 2 fb 				:	10, -1, -1, -1, -1, -1, -1, -1
+9	1 dl, 2 bb 				:	10, -1, -1, -1, -1, -1, -1, -1
+10	1 dl, 1 fb, 1 bb 		:	10, -1, -1, -1, -1, -1, -1, -1
+11	2 dl, 2 fb 				:	 3, -1, 10, -1, -1, -1, -1, -1
+12	2 dl, 2 bb 				:	 3, 10, -1, -1, -1, -1, -1, -1
+13	2 dl, 1 fb, 1 bb 		:	 3,  5, 10, -1, -1, -1, -1, -1
+14	3 dl, 2 fb 				:	-1, -1, 10, -1, -1, -1, -1, -1
+15	3 dl, 2 bb 				:	-1, 10, -1, -1, -1, -1, -1, -1
+16	3 dl, 1 fb, 1 bb 		:	-1,  5, 10, -1, -1, -1, -1, -1
+17	2 dl, 2 fb, 1 bb 		:	10, -1, -1, -1, -1, -1, -1, -1
+18	2 dl, 1 fb, 2 bb 		:	10, -1, -1, -1, -1, -1, -1, -1
+19	3 dl, 2 fb, 1 bb 		:	 3, -1, 10, -1, -1, -1, -1, -1
+20	3 dl, 1 fb, 2 bb 		:	 3, 10, -1, -1, -1, -1, -1, -1
+21	4 dl, 2 fb, 1 bb 		:	-1, -1, 10, -1, -1, -1, -1, -1
+22	4 dl, 1 fb, 2 bb 		:	-1, 10, -1, -1, -1, -1, -1, -1
+23	3 dl, 2 fb, 2 bb 		:	10, -1, -1, -1, -1, -1, -1, -1
+24	4 dl, 2 fb, 2 bb 		:	-1, -1, -1, 10, -1, -1, -1, -1
+25	4 dl, 2 fb, 2 bb, st 	:	-1, -1, -1, -1, -1, -1, -1, 10
+26	seat subassembly		:	 3, -1, -1, -1, 10, -1, -1, -1	^------------------------------^
+27	1 tb 					:	10, -1, -1, -1, -1, -1, -1, -1	v------ back in progress ------v
+28	1 dl, 1 tb 				:	 3, -1, -1, -1, 10, -1, -1, -1
+29	1 dl, 2 tb 				:	10, -1, -1, -1, -1, -1, -1, -1
+30	2 dl, 1 tb 				:	-1, -1, -1, -1, 10, -1, -1, -1
+31	2 dl, 2 tb 				:	-1, -1, -1, -1, -1,  5, 10, -1
+32	2 dl, 2 tb, ld 			:	-1, -1, -1, -1, -1, -1, 10, -1
+33	2 dl, 2 tb, bk 			:	-1, -1, -1, -1, -1, 10, -1, -1
+34	2 dl, 2 tb, ld, bk 		:	-1, -1, -1, -1, -1, -1, -1, 10
+35	back subassembly 		:	 3,  5, 10, -1, -1, -1, -1, -1	^------------------------------^
+36	bs, 1 dl				:	-1,  3, 10, -1, -1, -1, -1, -1	v------ back subassembly + seat in progress ------v
+37	bs, 1 fb 				:	10, -1, -1, -1, -1, -1, -1, -1
+38	bs, 1 bb 				:	10, -1, -1, -1, -1, -1, -1, -1
+39	bs, 1 dl, 1 fb 			:	 3,  5, 10, -1, -1, -1, -1, -1
+40	bs, 1 dl, 1 bb 			:	 3,  5, 10, -1, -1, -1, -1, -1  ###
+41	bs, 2 dl, 1 fb 			:	-1,  3, 10, -1, -1, -1, -1, -1
+42	bs, 2 dl, 1 bb 			:	-1,  3, 10, -1, -1, -1, -1, -1
+43	bs, 1 dl, 2 fb 			:	10, -1, -1, -1, -1, -1, -1, -1
+44	bs, 1 dl, 2 bb 			:	10, -1, -1, -1, -1, -1, -1, -1
+45	bs, 1 dl, 1 fb, 1 bb 	:	10, -1, -1, -1, -1, -1, -1, -1
+46	bs, 2 dl, 2 fb 			:	 3, -1, 10, -1, -1, -1, -1, -1
+47	bs, 2 dl, 2 bb 			:	 3, 10, -1, -1, -1, -1, -1, -1
+48	bs, 2 dl, 1 fb, 1 bb 	:	 3,  5, 10, -1, -1, -1, -1, -1  ### somehow these two rows are generating high Q values in col 1 (fb). Some future reward is accumulating there.
+49	bs, 3 dl, 2 fb 			:	-1, -1, 10, -1, -1, -1, -1, -1
+50	bs, 3 dl, 2 bb 			:	-1, 10, -1, -1, -1, -1, -1, -1
+51	bs, 3 dl, 1 fb, 1 bb 	:	-1,  3, 10, -1, -1, -1, -1, -1
+52	bs, 2 dl, 2 fb, 1 bb 	:	10, -1, -1, -1, -1, -1, -1, -1
+53	bs, 2 dl, 1 fb, 2 bb 	:	10, -1, -1, -1, -1, -1, -1, -1
+54	bs, 3 dl, 2 fb, 1 bb 	:	 3, -1, 10, -1, -1, -1, -1, -1
+55	bs, 3 dl, 1 fb, 2 bb 	:	 3, 10, -1, -1, -1, -1, -1, -1
+56	bs, 4 dl, 2 fb, 1 bb 	:	-1, -1, 10, -1, -1, -1, -1, -1
+57	bs, 4 dl, 1 fb, 2 bb 	:	-1, 10, -1, -1, -1, -1, -1, -1
+58	bs, 3 dl, 2 fb, 2 bb 	:	10, -1, -1, -1, -1, -1, -1, -1
+59	bs, 4 dl, 2 fb, 2 bb 	:	-1, -1, -1, 10, -1, -1, -1, -1
+60	bs, 4 dl, 2 fb, 2 bb, st:	-1, -1, -1, -1, -1, -1, -1, 10	^-------------------------------------------------^
+61	ss, 1 dl 				:	-1, -1, -1, -1, 10, -1, -1, -1	v------ seat subassembly + back in progress ------v
+62	ss, 1 tb 				:	10, -1, -1, -1, -1, -1, -1, -1
+63	ss, 1 dl, 1 tb 			:	 3, -1, -1, -1, 10, -1, -1, -1
+64	ss, 1 dl, 2 tb 			:	10, -1, -1, -1, -1, -1, -1, -1
+65	ss, 2 dl, 1 tb 			:	-1, -1, -1, -1, 10, -1, -1, -1
+66	ss, 2 dl, 2 tb 			:	-1, -1, -1, -1, -1,  3, 10, -1
+67	ss, 2 dl, 2 tb, ld 		:	-1, -1, -1, -1, -1, -1, 10, -1
+68	ss, 2 dl, 2 tb, bk 		:	-1, -1, -1, -1, -1, 10, -1, -1
+69	ss, 2 dl, 2 tb, ld, bk	:	-1, -1, -1, -1, -1, -1, -1, 10	^-------------------------------------------------^
+70	chair 					:	-1, -1, -1, -1, -1, -1, -1, -1
+
+Each action, if correct, would transition the task into a new valid state. Incorrect actions are cancelled by human (no progress in task)
+
+The Q-learning formula depends on being able to estimate the future value, which is max{a}(Q[state at next time step]).
+Some of the actions lead to a valid next state. For those, we can provide a transition table. For those that don't, max{a}(Q[next state]) = -1
+The whole system is a little contrived right now because the reward matrix basically provides binary rewards. So future rewards dont't
+really need to be taken into account. But humans with sophisticated preferences could add nuance to the valid actions and provide real learning.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ TRANSITION MATRIX (S,A --> S') ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+								dl  fb  bb  st  tb  ld  bk  hd
+							----------------------------------
+0	nothing					:	 1,  2,  3, -1, 27, -1, -1, -1
+1	1 dl					:	-1,  4,  5, -1, 28, -1, -1, -1	v----- seat in progress -----v
+2	1 fb 					:	 4, -1, -1, -1, -1, -1, -1, -1
+3	1 bb 					:	 5, -1, -1, -1, -1, -1, -1, -1
+4	1 dl, 1 fb 				:	 6,  8, 10, -1, -1, -1, -1, -1
+5	1 dl, 1 bb 				:	 7, 10,  9, -1, -1, -1, -1, -1
+6	2 dl, 1 fb 				:	-1, 11, 13, -1, -1, -1, -1, -1
+7	2 dl, 1 bb 				:	-1, 13, 12, -1, -1, -1, -1, -1
+8	1 dl, 2 fb 				:	11, -1, -1, -1, -1, -1, -1, -1
+9	1 dl, 2 bb 				:	12, -1, -1, -1, -1, -1, -1, -1
+10	1 dl, 1 fb, 1 bb 		:	13, -1, -1, -1, -1, -1, -1, -1
+11	2 dl, 2 fb 				:	14, -1, 17, -1, -1, -1, -1, -1
+12	2 dl, 2 bb 				:	15, 18, -1, -1, -1, -1, -1, -1
+13	2 dl, 1 fb, 1 bb 		:	16, 17, 18, -1, -1, -1, -1, -1
+14	3 dl, 2 fb 				:	-1, -1, 19, -1, -1, -1, -1, -1
+15	3 dl, 2 bb 				:	-1, 20, -1, -1, -1, -1, -1, -1
+16	3 dl, 1 fb, 1 bb 		:	-1, 19, 20, -1, -1, -1, -1, -1
+17	2 dl, 2 fb, 1 bb 		:	19, -1, -1, -1, -1, -1, -1, -1
+18	2 dl, 1 fb, 2 bb 		:	20, -1, -1, -1, -1, -1, -1, -1
+19	3 dl, 2 fb, 1 bb 		:	21, -1, 23, -1, -1, -1, -1, -1
+20	3 dl, 1 fb, 2 bb 		:	22, 23, -1, -1, -1, -1, -1, -1
+21	4 dl, 2 fb, 1 bb 		:	-1, -1, 24, -1, -1, -1, -1, -1
+22	4 dl, 1 fb, 2 bb 		:	-1, 24, -1, -1, -1, -1, -1, -1
+23	3 dl, 2 fb, 2 bb 		:	24, -1, -1, -1, -1, -1, -1, -1
+24	4 dl, 2 fb, 2 bb 		:	-1, -1, -1, 25, -1, -1, -1, -1
+25	4 dl, 2 fb, 2 bb, st 	:	-1, -1, -1, -1, -1, -1, -1, 26
+26	st 						:	61, -1, -1, -1, 62, -1, -1, -1	^------------------------------^
+27	1 tb 					:	28, -1, -1, -1, -1, -1, -1, -1	v------ back in progress ------v
+28	1 dl, 1 tb 				:	30, -1, -1, -1, 29, -1, -1, -1
+29	1 dl, 2 tb 				:	31, -1, -1, -1, -1, -1, -1, -1
+30	2 dl, 1 tb 				:	-1, -1, -1, -1, 31, -1, -1, -1
+31	2 dl, 2 tb 				:	-1, -1, -1, -1, -1, 32, 33, -1
+32	2 dl, 2 tb, ld 			:	-1, -1, -1, -1, -1, -1, 34, -1
+33	2 dl, 2 tb, bk 			:	-1, -1, -1, -1, -1, 34, -1, -1
+34	2 dl, 2 tb, ld, bk 		:	-1, -1, -1, -1, -1, -1, -1, 35
+35	bs 				 		:	36, 37, 38, -1, -1, -1, -1, -1	^------------------------------^
+36	bs, 1 dl				:	-1, 39, 40, -1, -1, -1, -1, -1	v------ back subassembly + seat in progress ------v
+37	bs, 1 fb 				:	39, -1, -1, -1, -1, -1, -1, -1
+38	bs, 1 bb 				:	40, -1, -1, -1, -1, -1, -1, -1
+39	bs, 1 dl, 1 fb 			:	41, 43, 45, -1, -1, -1, -1, -1
+40	bs, 1 dl, 1 bb 			:	42, 45, 44, -1, -1, -1, -1, -1
+41	bs, 2 dl, 1 fb 			:	-1, 46, 48, -1, -1, -1, -1, -1
+42	bs, 2 dl, 1 bb 			:	-1, 48, 47, -1, -1, -1, -1, -1
+43	bs, 1 dl, 2 fb 			:	46, -1, -1, -1, -1, -1, -1, -1
+44	bs, 1 dl, 2 bb 			:	47, -1, -1, -1, -1, -1, -1, -1
+45	bs, 1 dl, 1 fb, 1 bb 	:	48, -1, -1, -1, -1, -1, -1, -1
+46	bs, 2 dl, 2 fb 			:	49, -1, 52, -1, -1, -1, -1, -1
+47	bs, 2 dl, 2 bb 			:	50, 53, -1, -1, -1, -1, -1, -1
+48	bs, 2 dl, 1 fb, 1 bb 	:	51, 52, 53, -1, -1, -1, -1, -1
+49	bs, 3 dl, 2 fb 			:	-1, -1, 54, -1, -1, -1, -1, -1
+50	bs, 3 dl, 2 bb 			:	-1, 55, -1, -1, -1, -1, -1, -1
+51	bs, 3 dl, 1 fb, 1 bb 	:	-1, 54, 55, -1, -1, -1, -1, -1
+52	bs, 2 dl, 2 fb, 1 bb 	:	54, -1, -1, -1, -1, -1, -1, -1
+53	bs, 2 dl, 1 fb, 2 bb 	:	55, -1, -1, -1, -1, -1, -1, -1
+54	bs, 3 dl, 2 fb, 1 bb 	:	56, -1, 58, -1, -1, -1, -1, -1
+55	bs, 3 dl, 1 fb, 2 bb 	:	57, 58, -1, -1, -1, -1, -1, -1
+56	bs, 4 dl, 2 fb, 1 bb 	:	-1, -1, 59, -1, -1, -1, -1, -1
+57	bs, 4 dl, 1 fb, 2 bb 	:	-1, 59, -1, -1, -1, -1, -1, -1
+58	bs, 3 dl, 2 fb, 2 bb 	:	59, -1, -1, -1, -1, -1, -1, -1
+59	bs, 4 dl, 2 fb, 2 bb 	:	-1, -1, -1, 60, -1, -1, -1, -1
+60	bs, 4 dl, 2 fb, 2 bb, st:	-1, -1, -1, -1, -1, -1, -1, 70	^-------------------------------------------------^
+61	ss, 1 dl 				:	-1, -1, -1, -1, 63, -1, -1, -1	v------ seat subassembly + back in progress ------v
+62	ss, 1 tb 				:	63, -1, -1, -1, -1, -1, -1, -1
+63	ss, 1 dl, 1 tb 			:	65, -1, -1, -1, 64, -1, -1, -1
+64	ss, 1 dl, 2 tb 			:	66, -1, -1, -1, -1, -1, -1, -1
+65	ss, 2 dl, 1 tb 			:	-1, -1, -1, -1, 66, -1, -1, -1
+66	ss, 2 dl, 2 tb 			:	-1, -1, -1, -1, -1, 67, 68, -1
+67	ss, 2 dl, 2 tb, ld 		:	-1, -1, -1, -1, -1, -1, 69, -1
+68	ss, 2 dl, 2 tb, bk 		:	-1, -1, -1, -1, -1, 69, -1, -1
+69	ss, 2 dl, 2 tb, ld, bk	:	-1, -1, -1, -1, -1, -1, -1, 70	^-------------------------------------------------^
+70	chair 					:	-1, -1, -1, -1, -1, -1, -1, -1
+
+
+
+Reward   | Input
+---------|------
+-1/inv   | Red button
+1 (ok)   | 1 green push
+2 (ok+)  | 2 green pushes
+3 (+++)  | 3 green pushes
+4 (++++) | 4 green pushes
+etc
+
+
+
+
+Reward matrix with +/-/0 reward for every state transition ('inv' for invalid transitions)
+R = [['inv', 'inv', 'inv', 'inv',     0,  'inv'],
+ 	 ['inv', 'inv', 'inv',     0, 'inv',    100],
+ 	 ['inv', 'inv', 'inv',     0, 'inv',  'inv'],
+ 	 ['inv',     0,     0, 'inv',     5,  'inv'], # [3,4] was 0
+ 	 [    0, 'inv', 'inv',     0, 'inv',    100],
+ 	 ['inv',     0, 'inv', 'inv',     0,    100]]
+Slightly altered sample graph from http://mnemstudio.org/path-finding-q-learning-tutorial.htm

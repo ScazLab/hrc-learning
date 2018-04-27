@@ -52,30 +52,30 @@ parser.add_argument('-tfl', '--transfer_learning',
                     default=0)
 parser.add_argument('-p', '--participant', help='id of participant', default='test')
 
-class DummyPredictor(object):
+# class DummyPredictor(object):
 
-    def __init__(self, object_list):
-        self.obj = object_list
-        self.words = [o.split('_')[0] for o in self.obj]
+#     def __init__(self, object_list):
+#         self.obj = object_list
+#         self.words = [o.split('_')[0] for o in self.obj]
 
-    @property
-    def n_obj(self):
-        return len(self.obj)
+#     @property
+#     def n_obj(self):
+#         return len(self.obj)
 
-    def transform(self, utterances):
-        return np.array([[w in u.lower() for w in self.words]
-                         for u in utterances])
+#     def transform(self, utterances):
+#         return np.array([[w in u.lower() for w in self.words]
+#                          for u in utterances])
 
-    def predict(self, Xc, Xs, exclude=[]):
-        # return an object that is in context and which name is in utterance
-        intersection = Xs * Xc
-        intersection[:, [self.obj.index(a) for a in exclude]] = 0
-        chosen = -np.ones((Xc.shape[0]), dtype='int8')
-        ii, jj = intersection.nonzero()
-        chosen[ii] = jj
-        scr = self.obj.index('screwdriver_1')
-        chosen[(chosen == -1).nonzero()[0]] = scr
-        return [self.obj[c] for c in chosen]
+#     def predict(self, Xc, Xs, exclude=[]):
+#         # return an object that is in context and which name is in utterance
+#         intersection = Xs * Xc
+#         intersection[:, [self.obj.index(a) for a in exclude]] = 0
+#         chosen = -np.ones((Xc.shape[0]), dtype='int8')
+#         ii, jj = intersection.nonzero()
+#         chosen[ii] = jj
+#         scr = self.obj.index('screwdriver_1')
+#         chosen[(chosen == -1).nonzero()[0]] = scr
+#         return [self.obj[c] for c in chosen]
 
 
 class QController(BaseController):
@@ -108,14 +108,14 @@ class QController(BaseController):
     OBS_TALKER = '/hmm_bern_preds/obs'
     TTS_DISPLAY = '/svox_tts/speech_output'
     TTS_SERVICE = '/svox_tts/speech'
-    ROSBAG_START = '/rosbag/start'
-    ROSBAG_STOP = '/rosbag/stop'
+    # ROSBAG_START = '/rosbag/start'
+    # ROSBAG_STOP = '/rosbag/stop'
     #PROVIDE_OBS_SRV_NAME = 'provide_obs'
     #PROVIDE_OBS_SRV_TYPE = ProvideObs
     #NUM_FEATS = len(OBJECT_DICT.keys())
     #NUM_FEATS = 6
-    MAX_SUPP_BHVS = 1
-    ACTION_PROB_THRESH = 0.5
+    # MAX_SUPP_BHVS = 1
+    # ACTION_PROB_THRESH = 0.5
 
     # Transition Matrix: (s,a) --> s'
     T = [[ 1,  2,  3, -1, 27, -1, -1, -1],
@@ -216,27 +216,27 @@ class QController(BaseController):
         rospy.wait_for_service(self.TTS_SERVICE)
         self.tts_service = rospy.ServiceProxy(self.TTS_SERVICE, Speech)
         self.tts_display = rospy.Publisher(self.TTS_DISPLAY, String, queue_size=20)
-        self.rosbag_start = rospy.ServiceProxy(self.ROSBAG_START, Empty)
-        self.rosbag_stop = rospy.ServiceProxy(self.ROSBAG_STOP, Empty)
+        # self.rosbag_start = rospy.ServiceProxy(self.ROSBAG_START, Empty)
+        # self.rosbag_stop = rospy.ServiceProxy(self.ROSBAG_STOP, Empty)
 
-    def obs_from_dict(self, d):
-        # return tuple([self.OBJECT_IDX[key][1]
-        #     for key in sorted(self.OBJECT_IDX.keys())]
-        print("MAKING OBS FROM DICT")
-        obs = []
-        for key in range(len(self.task_def.FEATURES)):
-            obs.append(d[self.task_def.FEATURES[key]])
-            print(obs[-1])
-        return tuple(obs)
-        # print("Keys ", sorted(d.keys()))
-        # return tuple([d[key]
-        #     for key in sorted(d.keys())])
+    # def obs_from_dict(self, d):
+    #     # return tuple([self.OBJECT_IDX[key][1]
+    #     #     for key in sorted(self.OBJECT_IDX.keys())]
+    #     print("MAKING OBS FROM DICT")
+    #     obs = []
+    #     for key in range(len(self.task_def.FEATURES)):
+    #         obs.append(d[self.task_def.FEATURES[key]])
+    #         print(obs[-1])
+    #     return tuple(obs)
+    #     # print("Keys ", sorted(d.keys()))
+    #     # return tuple([d[key]
+    #     #     for key in sorted(d.keys())])
 
-    def reset_dict(self, d):
-        for key in d.keys():
-            d[key] = 0
+    # def reset_dict(self, d):
+    #     for key in d.keys():
+    #         d[key] = 0
 
-    def prep_model(self):
+    # def prep_model(self):
         # if necessary, load/generate Qmatrix/other learning model.
 
 
@@ -274,55 +274,55 @@ class QController(BaseController):
         # else:
         #     self.model = joblib.load(model_file)
 
-        return 0
+        # return 0
 
-    def pred_supp_bhv(self, new_row_bin_feats, train_sb, train_sb_lens,
-                      train_set_sb):
-        self.current_ep_bin_feats.append(list(new_row_bin_feats))
-        test_sb = np.array(self.current_ep_bin_feats)
-        print("test_sb is ", test_sb)
-        test_sb_lens = [test_sb.shape[0]]
-        print("test_sb_lens is ", test_sb_lens)
+    # def pred_supp_bhv(self, new_row_bin_feats, train_sb, train_sb_lens,
+    #                   train_set_sb):
+    #     self.current_ep_bin_feats.append(list(new_row_bin_feats))
+    #     test_sb = np.array(self.current_ep_bin_feats)
+    #     print("test_sb is ", test_sb)
+    #     test_sb_lens = [test_sb.shape[0]]
+    #     print("test_sb_lens is ", test_sb_lens)
 
-        pred_supp_bhv = prob_supp_bhv_marg_hstate(model=self.model, delay=self.delay,
-                                                  X_prepped_train=train_sb, X_prepped_test=test_sb,
-                                                  supp_bhvs=train_set_sb[self.user_idx],
-                                                  X_prepped_train_lengths=train_sb_lens,
-                                                  X_prepped_test_lengths=test_sb_lens)
-        print("pred_supp_bhv ", pred_supp_bhv)
-        #max_prob_preds = pred_supp_bhv.max(axis=1)
-        print("sort ", pred_supp_bhv.argsort(axis=1))
-        argmax_prob_preds = pred_supp_bhv.argsort(axis=1)
-        #argmax_prob_preds = pred_supp_bhv.argmax(axis=1)
-        np.set_printoptions(precision=4, suppress=True)
-        # print("train_set_sb[user_idx] \n", self.train_set_sb[self.user_idx])
-        # print("predicting for test with gt \n", test_sb)
-        # print("pred_supp_bhv \n", pred_supp_bhv)
+    #     pred_supp_bhv = prob_supp_bhv_marg_hstate(model=self.model, delay=self.delay,
+    #                                               X_prepped_train=train_sb, X_prepped_test=test_sb,
+    #                                               supp_bhvs=train_set_sb[self.user_idx],
+    #                                               X_prepped_train_lengths=train_sb_lens,
+    #                                               X_prepped_test_lengths=test_sb_lens)
+    #     print("pred_supp_bhv ", pred_supp_bhv)
+    #     #max_prob_preds = pred_supp_bhv.max(axis=1)
+    #     print("sort ", pred_supp_bhv.argsort(axis=1))
+    #     argmax_prob_preds = pred_supp_bhv.argsort(axis=1)
+    #     #argmax_prob_preds = pred_supp_bhv.argmax(axis=1)
+    #     np.set_printoptions(precision=4, suppress=True)
+    #     # print("train_set_sb[user_idx] \n", self.train_set_sb[self.user_idx])
+    #     # print("predicting for test with gt \n", test_sb)
+    #     # print("pred_supp_bhv \n", pred_supp_bhv)
 
-        #print("max_prob_preds \n", max_prob_preds)
-        print("argmax_prob_preds \n", argmax_prob_preds)
-        print("len ", len(argmax_prob_preds[0]))
-        print("Max item ", len(argmax_prob_preds[0])-1)
+    #     #print("max_prob_preds \n", max_prob_preds)
+    #     print("argmax_prob_preds \n", argmax_prob_preds)
+    #     print("len ", len(argmax_prob_preds[0]))
+    #     print("Max item ", len(argmax_prob_preds[0])-1)
 
-        robot_action_names = []
-        for arg in reversed(argmax_prob_preds[-1]):
-            if pred_supp_bhv[-1][arg] > self.ACTION_PROB_THRESH:
-                robot_action_names.append(self.task_def.supp_bhvs_rev[arg])
-
-
-        # # if 'br_dowel' is predicted, move it at the end of the array
-        # if 'br_dowel' in robot_action_names:
-        #     robot_action_names.remove('br_dowel')
-        #     robot_action_names.append('br_dowel')
+    #     robot_action_names = []
+    #     for arg in reversed(argmax_prob_preds[-1]):
+    #         if pred_supp_bhv[-1][arg] > self.ACTION_PROB_THRESH:
+    #             robot_action_names.append(self.task_def.supp_bhvs_rev[arg])
 
 
-        # if 'hold' is predicted, move it at the end of the array
-        if 'hold' in robot_action_names:
-            robot_action_names.remove('hold')
-            robot_action_names.append('hold')
-        print("The predicted robot actions to be returned are ")
-        print(robot_action_names)
-        return robot_action_names
+    #     # # if 'br_dowel' is predicted, move it at the end of the array
+    #     # if 'br_dowel' in robot_action_names:
+    #     #     robot_action_names.remove('br_dowel')
+    #     #     robot_action_names.append('br_dowel')
+
+
+    #     # if 'hold' is predicted, move it at the end of the array
+    #     if 'hold' in robot_action_names:
+    #         robot_action_names.remove('hold')
+    #         robot_action_names.append('hold')
+    #     print("The predicted robot actions to be returned are ")
+    #     print(robot_action_names)
+    #     return robot_action_names
 
         # if test_sb[robot_action_idx] == 1:
         #     print("Correct supp bhv")
@@ -371,11 +371,7 @@ class QController(BaseController):
         while (True):    # keep running trials until user says to stop
             greenlight = raw_input("Ready to start new trial. Continue? (enter 'y' to run a trial, anything else to quit)")
             if greenlight != 'y':
-                break
-
-
-            self.take_action('hold')
-            
+                break            
             
             # begin trial
             trial = trial + 1
@@ -400,6 +396,9 @@ class QController(BaseController):
                     
                     # reward = 10
                     reward = self.human_feedback()
+                    if reward != '1' and reward != '2' and reward != '3' and reward != '4' and reward != '5' and reward != '6' and reward != '7' and reward != '8' and reward != '9' and reward != '10':
+                        print("ERROR: non-numeric reward received")
+                    reward = int(reward) # convert to int
                     if reward == 0:
                         print("Error: web feedback gave 0")
                         exit()
@@ -488,8 +487,8 @@ class QController(BaseController):
             #     rospy.signal_shutdown("End of task.")
 
     # shouldn't be starting rosbag at all
-    def _abort(self):
-        self.rosbag_stop()
+    # def _abort(self):
+    #     self.rosbag_stop()
 
     # don't need to talk unless it's trivial
     def _robot_speech(self, sentence):
@@ -583,69 +582,69 @@ class QController(BaseController):
         print("Move on to the next supp bhv for time step {}".format(self.time_step))
 
 
-    def sim_update_obj_state(self, action):
-        if action != 'cleanup' and action != 'hold' \
-                and action in self.obj_state.keys():
-            self.obj_state[action] = 1
+    # def sim_update_obj_state(self, action):
+    #     if action != 'cleanup' and action != 'hold' \
+    #             and action in self.obj_state.keys():
+    #         self.obj_state[action] = 1
 
-    def update_obj_state(self, action_taken, action, object_action_idx):
-        # check this
-        # if self.last_brought['long_dowel'] == 1:
-        #     self.obj_state[self.task_def.FEATURES[self.task_def.OBJ_COUNT_IDX['long_dowel'][0]]] = 0
-        # if self.last_brought['back'] == 1:
-        #     self.obj_state[self.task_def.FEATURES[self.task_def.OBJ_COUNT_IDX['back'][0]]] = 0
-        # if self.last_brought['seat'] == 1:
-        #     self.obj_state[self.task_def.FEATURES[self.task_def.OBJ_COUNT_IDX['seat'][0]]] = 0
-        self.reset_dict(self.last_brought)
-        print("action_taken ", action_taken)
-        print("object_action_idx ", object_action_idx)
-        # if object_action_idx != None:
-        #     obj_in_dict = action[3:]+'_'+str(object_action_idx)
-        # else:
-        #     obj_in_dict = action[3:]
-        obj_in_dict = action
-        if object_action_idx != None and action != 'hold':
-            obj_in_dict = action[3:]
-        if action == 'hold':
-            obj_in_dict = 'hold_active'
-        print("dict obj ", obj_in_dict)
-        if action_taken == 1 and action != 'cleanup' \
-                and obj_in_dict in self.task_def.OBJ_COUNT_IDX.keys():
-            # self.obj_state[obj_in_dict] = 1
-            if obj_in_dict in self.last_brought.keys():
-                self.last_brought[obj_in_dict] = 1
-            feat_idx = self.task_def.OBJ_COUNT_IDX[obj_in_dict]
-            print("*action ", action)
-            print("*obj_in_dict ", obj_in_dict)
-            if len(feat_idx) > 1:
-                i = feat_idx[0]
-                print("*i ", i)
-                while(self.obj_state[self.task_def.FEATURES[i]]) == 1:
-                    i += 1
-                self.obj_state[self.task_def.FEATURES[i]] = 1
-                print("*obj_state[i] ", self.obj_state[self.task_def.FEATURES[i]])
-            else:
-                self.obj_state[self.task_def.FEATURES[feat_idx[0]]] = 1
-                print("*obj_state[feat_idx[0]] ", self.obj_state[self.task_def.FEATURES[feat_idx[0]]])
-            if obj_in_dict == 'back_bracket':
-                self.obj_state[self.task_def.FEATURES[self.task_def.OBJ_COUNT_IDX['type_back_bracket'][0]]] = 1
-            if obj_in_dict == 'front_bracket':
-                self.obj_state[self.task_def.FEATURES[self.task_def.OBJ_COUNT_IDX['type_front_bracket'][0]]] = 1
+    # def update_obj_state(self, action_taken, action, object_action_idx):
+    #     # check this
+    #     # if self.last_brought['long_dowel'] == 1:
+    #     #     self.obj_state[self.task_def.FEATURES[self.task_def.OBJ_COUNT_IDX['long_dowel'][0]]] = 0
+    #     # if self.last_brought['back'] == 1:
+    #     #     self.obj_state[self.task_def.FEATURES[self.task_def.OBJ_COUNT_IDX['back'][0]]] = 0
+    #     # if self.last_brought['seat'] == 1:
+    #     #     self.obj_state[self.task_def.FEATURES[self.task_def.OBJ_COUNT_IDX['seat'][0]]] = 0
+    #     self.reset_dict(self.last_brought)
+    #     print("action_taken ", action_taken)
+    #     print("object_action_idx ", object_action_idx)
+    #     # if object_action_idx != None:
+    #     #     obj_in_dict = action[3:]+'_'+str(object_action_idx)
+    #     # else:
+    #     #     obj_in_dict = action[3:]
+    #     obj_in_dict = action
+    #     if object_action_idx != None and action != 'hold':
+    #         obj_in_dict = action[3:]
+    #     if action == 'hold':
+    #         obj_in_dict = 'hold_active'
+    #     print("dict obj ", obj_in_dict)
+    #     if action_taken == 1 and action != 'cleanup' \
+    #             and obj_in_dict in self.task_def.OBJ_COUNT_IDX.keys():
+    #         # self.obj_state[obj_in_dict] = 1
+    #         if obj_in_dict in self.last_brought.keys():
+    #             self.last_brought[obj_in_dict] = 1
+    #         feat_idx = self.task_def.OBJ_COUNT_IDX[obj_in_dict]
+    #         print("*action ", action)
+    #         print("*obj_in_dict ", obj_in_dict)
+    #         if len(feat_idx) > 1:
+    #             i = feat_idx[0]
+    #             print("*i ", i)
+    #             while(self.obj_state[self.task_def.FEATURES[i]]) == 1:
+    #                 i += 1
+    #             self.obj_state[self.task_def.FEATURES[i]] = 1
+    #             print("*obj_state[i] ", self.obj_state[self.task_def.FEATURES[i]])
+    #         else:
+    #             self.obj_state[self.task_def.FEATURES[feat_idx[0]]] = 1
+    #             print("*obj_state[feat_idx[0]] ", self.obj_state[self.task_def.FEATURES[feat_idx[0]]])
+    #         if obj_in_dict == 'back_bracket':
+    #             self.obj_state[self.task_def.FEATURES[self.task_def.OBJ_COUNT_IDX['type_back_bracket'][0]]] = 1
+    #         if obj_in_dict == 'front_bracket':
+    #             self.obj_state[self.task_def.FEATURES[self.task_def.OBJ_COUNT_IDX['type_front_bracket'][0]]] = 1
 
 
-    def sim_take_action(self, action):
-        print("Reached sim_take_action for action ", action)
-        self.human_input = None
-        while self.human_input != 'error' and self.human_input != 'home':
-            rospy.Subscriber(self.WEB_INTERFACE, String, self.web_interface_callback)
-            print("got human_input ", self.human_input)
-            if self.human_input:
-                self.sim_update_obj_state(self.human_input)
-            rospy.rostime.wallsleep(0.5)
-        if self.human_input == 'home':
-            return 1
-        if self.human_input == 'error':
-            return 0
+    # def sim_take_action(self, action):
+    #     print("Reached sim_take_action for action ", action)
+    #     self.human_input = None
+    #     while self.human_input != 'error' and self.human_input != 'home':
+    #         rospy.Subscriber(self.WEB_INTERFACE, String, self.web_interface_callback)
+    #         print("got human_input ", self.human_input)
+    #         if self.human_input:
+    #             self.sim_update_obj_state(self.human_input)
+    #         rospy.rostime.wallsleep(0.5)
+    #     if self.human_input == 'home':
+    #         return 1
+    #     if self.human_input == 'error':
+    #         return 0
 
     # takes the index of an action from my ordered list:
     # ["grab dowel",                # 0   br_dowel
@@ -823,10 +822,3 @@ if __name__ == '__main__':
     # rospy.init_node('HM`MBernPredsController')
     controller.time_step = 0
     controller.run()
-    
-    
-    
-    
-# Problems:
-# 1. Error 'NoneType' object has no attribute '__getitem__'     whenevber it tries to choose 'hold'
-# 2. Robot seems to get stuck in kinked up right arm position

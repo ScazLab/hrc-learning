@@ -1,0 +1,98 @@
+
+Using Baxter
+-----------
+
+
+~~~terminal in ros_devel_ws~~~
+./baxter.sh
+untuck
+roslaunch hrc_learning hrc_learning.launch
+~~~~~~~~~new terminal~~~~~~~~~
+./baxter.sh
+rosrun hrc_learning controller.py
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+WHEN CONTROLLER IS NOT FOUND OR NOT EXECUTABLE
+1. chmod +x controller.py
+2. LINUX-STYLE LINE ENDINGS (shebang not read correctly)
+3. (maybe) rebuild catkin package (make sure to only build mine, not everyone's). Seems to not be necessary at least after changing line endings
+
+
+Log into scazlab
+password is baxter
+Just switch onto a different workspace if people have left stuff open
+Try not to leave stuff open in others' way
+Everything is in home/ros_devel_ws (one common shared workspace for all users)
+Inside the workspace are a bunch of packages for individual projects.
+human_robot_collaboration. I might but probably don't need to include task-models 
+A bunch of packages are in there; don't modify existing but rather extend if necessary in my own package
+All the packages are catkin packages with a package.xml file inside. It's also a python package with setup.py
+I should mimic that setup.py
+In web browser check out catkin cheat sheet and quick start video
+Nav to src, and go catkin - create package. Name package. That folder will have CMakeLists.txt and package.xml
+Mimic hrc_pred_supp_bhv (Corina's package)
+The main stuff is in the folder with the same name inside the package. Local libraries in there. Each has an __init__.py and __init__.pyc. Typical organization is a bunch of subfolders conceptually divided. These are all the things you need to import. Local libraries have AI and algorithm stuff. Controller in scripts is like manager that calls various things.
+Somewhere else in catkin/python package is scripts folder. Contains controller.py
+Package is locally installed. Not sure if buiding catkin is enough or if you have to also install using python. Python method is pip install -e <path>. Path is to top level package she thinks. Will install in development mode which adds the package path to pythonpath. Better pratice than adding the path to pythonpath from within the script itself.
+If it doesn't work right after you build catkin package, then use pip install -e <path>. Can know if it worked or not based on whether or not you get an import error.
+Don't need rosbag.launch
+Do need [package name].launch
+Mimic corina's launch file. Has dependencies for controller and object IDs. Has rosbridge websocket (necessary) and text-to-speech (not so necessary) dependencies too. Might just be ok copy pasting that file wholesale
+Don't need models.
+
+First thing is to turn on robot (white power button on back)
+home/corina_local has commands.txt as a cheat sheet for sending commands
+Always cd into ros_devel_ws
+First: $ ./baxter.sh
+That connects with roscore running on robot
+Always send command 'untuck' to make sure we are communicating. At the end, after you ctrl-C your own controller, send 'tuck' and then press the button behind to turn off robot.
+Next, build catkin package if you changed anything. (new terminal for convenience): catkin build hrc_learning
+	Skip rosrun server 
+	Skip roslaunch rosbag (if I'm not using rosbag to record stuff)
+Third: roslaunch <name of package> <name of launch file>
+	   roslaunch hrc_learning hrc_learning.launch
+GREEN LIGHT: Fourth: rosrun <name of package> controller.py
+					 rosrun hrc_learning controller.py
+
+Take action
+self._action actually controls the robot
+
+I can call my class however, but make sure it extendes BaseController
+call super(args) to initialize base fields of BaseController
+I definitely need:
+	def _run(self):  # overrides _run in basecontroller
+don't really need anything else. self._action is a member of the base controller class. take_action would probably be useful too.
+At the bottom we create an instance of controller with stuff
+Then have controller.run (no underscore) at end
+Base controller will print out error messages. Everything is logged
+r.response has everything, including button feedback.
+
+Start with simple action. Just take the same thing every time.
+There might be a bit of extra info in the readme on github
+
+To test actions directly from terminal, use rosservice call /action_provider...left "{action...
+Can send a list of a few object ids and it will choose randomly.
+
+It seems like there are some issues on the computer...
+1. rosbridge wasn't being found. Take out rosbridge from launch file for now. If you need it, add it, if errors, get help from Alessandro. rosbridge is used to send stuff to webpage via ros.
+2. data logger wasn't found (part of rosbag). If that's a problem, remove all references to rosbag from my code (I'm probably not using rosbag)
+3. No modulename ros_speech2text. Again, if necessary remove all speech references
+4. Sometimes you can't tuck at end (happens when you ctrl-c launch file). Have to restart robot to tuck. Try to avoid ctrl-cing the launch file a lot.
+
+don't need to rebuild package every time controller is modified. 
+If you rebuild the package, you have to restart the launch file after
+
+If you make any changes to core code in path, you have to rebuild workspace. But launch file doesn't have to build anything in scripts, so you don't have to rebuild.
+
+remove references to speech and rosbag in launch file as well
+
+AI part of code is in local 
+If I need to save anything, I save it in models. At the beginning, in controller, say go in models and look for the pickle file. If not there, then go to local library, go and train it, and save it in local library, and load it up.
+
+At the end save all files, ctrl-c all terminals but one. Should probably ctrl-c the controller first. Really should make controller so it terminates nicely. 'tuck' in final terminal, then ctrl-c. If it does't work, then turn off and wait for arms to go down and it to quiet down. Then turn on again and wait a while. Then untuck, tuck and turn off.
+Nice to 'exit' script at very end, close windows and terminals
+Don't turn off computer, just lock it.
+
+Slack Alessandro, Olivier, Corina if any issues
+Or pop by A and O's office

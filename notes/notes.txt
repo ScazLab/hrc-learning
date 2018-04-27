@@ -1,324 +1,39 @@
-States/Leaves
--------------
-HTM:
-                             chair task
-                         ________||________
-                        /                  \
-              build_seat                    build_back
-             _____->_______                    _->_____________
-            /      |       \                  /        \       \
-   gather_legs  grab_seat  ass_seat   gather_sides  grab_back  ass_back
-       ||                                  ||
-gL0 gL1 gL2 gL3                         gS0 gS1
-
-
-	HTM has ten leaves:
-	0. gL0 - grab dowel, grab front bracket
-	1. gL1 - grab dowel, grab front bracket
-	2. gL2 - grab dowel, grab back bracket
-	3. gL3 - grab dowel, grab back bracket
-	4. grab_seat - grab seat
-	5. ass_seat - hold [leg subassembly]
-	6. gs0 - grab dowel, grab top bracket
-	7. gs1 - grab dowel, grab top bracket
-	8. grab_back - grab long dowel, grab back
-	9. ass_back - hold [back subassembly]
-
-	Robot has no knowledge of the HTM nor any internal representation of leaves.
-
-	Parts:
-	-----
-	Dowel 0
-	Dowel 1
-	Dowel 2
-	Dowel 3
-	Front bracket 0
-	Front bracket 1
-	Back bracket 0
-	Back bracket 1
-	Seat
-	Seat subassembly
-	Top bracket 0
-	Top bracket 1
-	Long dowel
-	Back
-	Back subassembly
-	Chair
-
-These are the parts that the robot could reasonably see with computer vision.
-Their presence or absence on table are the only inputs it will be able to get from the environment.
-There are 6 dowels total but only 4 can be individually on table at once, so we only go up to 4.
-
-Leaves are vectors of parts on the table (there or not there)
-Leaves are sparse, because we are only dealing with the states that are reachable within the HTM
-(eg. we'd never have long dowel, seat, and dowel on the table)
-There is no binary counting (for dowels) b/c would only save 1 bit; every bit is just presence or absence of part.
-
-Leaf bitmap:
-		[ 15| 14| 13| 12| 11| 10| 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 ]
-		[ d0| d1| d2| d3|fb0|fb1|bb0|bb1| s | ss|tb0|tb1| ld| b | bs| c ]
-States:
-	0	[ 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	nothing
-
-	1	[ 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	1 dowel
-	2	[ 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	1 fb
-	3	[ 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	1 bb
-	4	[ 1 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	1 dowel, 1 fb
-	5	[ 1 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	1 dowel, 1 bb
-	6	[ 1 | 1 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	2 dowel, 1 fb
-	7	[ 1 | 1 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	2 dowel, 1 bb
-	8	[ 1 | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	1 dowel, 2 fb
-	9	[ 1 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	1 dowel, 2 bb
-	10	[ 1 | 0 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	1 dowel, 1 fb, 1 bb
-	11	[ 1 | 1 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	2 dowel, 2 fb
-	12	[ 1 | 1 | 0 | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	2 dowel, 2 bb
-	13	[ 1 | 1 | 0 | 0 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	2 dowel, 1 fb, 1 bb
-	14	[ 1 | 1 | 1 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	3 dowel, 2 fb
-	15	[ 1 | 1 | 1 | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	3 dowel, 2 bb
-	16	[ 1 | 1 | 1 | 0 | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	3 dowel, 1 fb, 1 bb
-	17	[ 1 | 1 | 0 | 0 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	2 dowel, 2 fb, 1 bb
-	18	[ 1 | 1 | 0 | 0 | 1 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	2 dowel, 1 fb, 2 bb
-	19	[ 1 | 1 | 1 | 0 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	3 dowel, 2 fb, 1 bb
-	20	[ 1 | 1 | 1 | 0 | 1 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	3 dowel, 1 fb, 2 bb
-	21	[ 1 | 1 | 1 | 1 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	4 dowel, 2 fb, 1 bb
-	22	[ 1 | 1 | 1 | 1 | 1 | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	4 dowel, 1 fb, 2 bb
-	23	[ 1 | 1 | 1 | 0 | 1 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	3 dowel, 2 fb, 2 bb
-	24	[ 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	4 dowel, 2 fb, 2 bb
-	25	[ 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	4 dowel, 2 fb, 2 bb, seat
-	26	[ 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 | 0 ]	seat subassembly
-
-	1	[ 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 ]	1 dowel (same as above)
-	27	[ 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 ]	1 tb
-	28	[ 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 ]	1 dowel, 1 tb
-	29	[ 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 ]	1 dowel, 2 tb
-	30	[ 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 | 0 ]	2 dowel, 1 tb
-	31	[ 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 0 | 0 | 0 | 0 ]	2 dowel, 2 tb
-	32	[ 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 1 | 0 | 0 | 0 ]	2 dowel, 2 tb, ld
-	33	[ 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 0 | 1 | 0 | 0 ]	2 dowel, 2 tb, back
-	34	[ 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 | 1 | 1 | 0 | 0 ]	2 dowel, 2 tb, ld, back
-	35	[ 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 ]	back subassembly
-
-  36:60	[ - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - ]	back subassembly + seat assembly states 
-  61:69	[ - | - | - | - | - | - | - | - | - | - | - | - | - | - | - | - ]	seat subassembly + back assembly states
-
-	70	[ 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 ]	chair
-
-71 total states
-Each of these states has 1 or more acceptable actions implicitly associated with it
-No bs + ss state because ss + all bs parts or vice versa jump to completed chair in a single hold
-
-
-
-Actions
--------
-0. grab dowel
-1. grab front bracket
-2. grab back bracket
-3. grab seat
-4. grab top bracket
-5. grab long dowel
-6. grab back
-7. hold
-
-Reward Matrix
--------------
-This basically ecnodes the logic behind the participant learning test on Corina's whiteboard
-Rows are states, columns are actions
-
-
-~~~~~~~~~~~~~~~~~~~~~ HTM-DRIVEN REWARDS (NO PREFERENCES) (S,A --> R) ~~~~~~~~~~~~~~~~~~~~~~~~
-
-								dl  fb  bb  st  tb  ld  bk  hd
-							----------------------------------
-0	nothing					:	10, 10, 10, -1, 10, -1, -1, -1
-1	1 dowel					:	-1, 10, 10, -1, 10, -1, -1, -1	v----- seat in progress -----v
-2	1 fb 					:	10, -1, -1, -1, -1, -1, -1, -1
-3	1 bb 					:	10, -1, -1, -1, -1, -1, -1, -1
-4	1 dl, 1 fb 				:	10, 10, 10, -1, -1, -1, -1, -1
-5	1 dl, 1 bb 				:	10, 10, 10, -1, -1, -1, -1, -1
-6	2 dl, 1 fb 				:	-1, 10, 10, -1, -1, -1, -1, -1
-7	2 dl, 1 bb 				:	-1, 10, 10, -1, -1, -1, -1, -1
-8	1 dl, 2 fb 				:	10, -1, -1, -1, -1, -1, -1, -1
-9	1 dl, 2 bb 				:	10, -1, -1, -1, -1, -1, -1, -1
-10	1 dl, 1 fb, 1 bb 		:	10, -1, -1, -1, -1, -1, -1, -1
-11	2 dl, 2 fb 				:	10, -1, 10, -1, -1, -1, -1, -1
-12	2 dl, 2 bb 				:	10, 10, -1, -1, -1, -1, -1, -1
-13	2 dl, 1 fb, 1 bb 		:	10, 10, 10, -1, -1, -1, -1, -1
-14	3 dl, 2 fb 				:	-1, -1, 10, -1, -1, -1, -1, -1
-15	3 dl, 2 bb 				:	-1, 10, -1, -1, -1, -1, -1, -1
-16	3 dl, 1 fb, 1 bb 		:	-1, 10, 10, -1, -1, -1, -1, -1
-17	2 dl, 2 fb, 1 bb 		:	10, -1, -1, -1, -1, -1, -1, -1
-18	2 dl, 1 fb, 2 bb 		:	10, -1, -1, -1, -1, -1, -1, -1
-19	3 dl, 2 fb, 1 bb 		:	10, -1, 10, -1, -1, -1, -1, -1
-20	3 dl, 1 fb, 2 bb 		:	10, 10, -1, -1, -1, -1, -1, -1
-21	4 dl, 2 fb, 1 bb 		:	-1, -1, 10, -1, -1, -1, -1, -1
-22	4 dl, 1 fb, 2 bb 		:	-1, 10, -1, -1, -1, -1, -1, -1
-23	3 dl, 2 fb, 2 bb 		:	10, -1, -1, -1, -1, -1, -1, -1
-24	4 dl, 2 fb, 2 bb 		:	-1, -1, -1, 10, -1, -1, -1, -1
-25	4 dl, 2 fb, 2 bb, st 	:	-1, -1, -1, -1, -1, -1, -1, 10
-26	seat subassembly		:	10, -1, -1, -1, 10, -1, -1, -1	^------------------------------^
-27	1 tb 					:	10, -1, -1, -1, -1, -1, -1, -1	v------ back in progress ------v
-28	1 dl, 1 tb 				:	10, -1, -1, -1, 10, -1, -1, -1
-29	1 dl, 2 tb 				:	10, -1, -1, -1, -1, -1, -1, -1
-30	2 dl, 1 tb 				:	-1, -1, -1, -1, 10, -1, -1, -1
-31	2 dl, 2 tb 				:	-1, -1, -1, -1, -1, 10, 10, -1
-32	2 dl, 2 tb, ld 			:	-1, -1, -1, -1, -1, -1, 10, -1
-33	2 dl, 2 tb, bk 			:	-1, -1, -1, -1, -1, 10, -1, -1
-34	2 dl, 2 tb, ld, bk 		:	-1, -1, -1, -1, -1, -1, -1, 10
-35	back subassembly 		:	10, 10, 10, -1, -1, -1, -1, -1	^------------------------------^
-36	bs, 1 dl				:	-1, 10, 10, -1, -1, -1, -1, -1	v------ back subassembly + seat in progress ------v
-37	bs, 1 fb 				:	10, -1, -1, -1, -1, -1, -1, -1
-38	bs, 1 bb 				:	10, -1, -1, -1, -1, -1, -1, -1
-39	bs, 1 dl, 1 fb 			:	10, 10, 10, -1, -1, -1, -1, -1
-40	bs, 1 dl, 1 bb 			:	10, 10, 10, -1, -1, -1, -1, -1
-41	bs, 2 dl, 1 fb 			:	-1, 10, 10, -1, -1, -1, -1, -1
-42	bs, 2 dl, 1 bb 			:	-1, 10, 10, -1, -1, -1, -1, -1
-43	bs, 1 dl, 2 fb 			:	10, -1, -1, -1, -1, -1, -1, -1
-44	bs, 1 dl, 2 bb 			:	10, -1, -1, -1, -1, -1, -1, -1
-45	bs, 1 dl, 1 fb, 1 bb 	:	10, -1, -1, -1, -1, -1, -1, -1
-46	bs, 2 dl, 2 fb 			:	10, 10, 10, -1, -1, -1, -1, -1
-47	bs, 2 dl, 2 bb 			:	10, 10, 10, -1, -1, -1, -1, -1
-48	bs, 2 dl, 1 fb, 1 bb 	:	10, 10, 10, -1, -1, -1, -1, -1
-49	bs, 3 dl, 2 fb 			:	-1, -1, 10, -1, -1, -1, -1, -1
-50	bs, 3 dl, 2 bb 			:	-1, 10, -1, -1, -1, -1, -1, -1
-51	bs, 3 dl, 1 fb, 1 bb 	:	-1, 10, 10, -1, -1, -1, -1, -1
-52	bs, 2 dl, 2 fb, 1 bb 	:	10, -1, -1, -1, -1, -1, -1, -1
-53	bs, 2 dl, 1 fb, 2 bb 	:	10, -1, -1, -1, -1, -1, -1, -1
-54	bs, 3 dl, 2 fb, 1 bb 	:	10, -1, 10, -1, -1, -1, -1, -1
-55	bs, 3 dl, 1 fb, 2 bb 	:	10, 10, -1, -1, -1, -1, -1, -1
-56	bs, 4 dl, 2 fb, 1 bb 	:	-1, -1, 10, -1, -1, -1, -1, -1
-57	bs, 4 dl, 1 fb, 2 bb 	:	-1, 10, -1, -1, -1, -1, -1, -1
-58	bs, 3 dl, 2 fb, 2 bb 	:	10, -1, -1, -1, -1, -1, -1, -1
-59	bs, 4 dl, 2 fb, 2 bb 	:	-1, -1, -1, 10, -1, -1, -1, -1
-60	bs, 4 dl, 2 fb, 2 bb, st:	-1, -1, -1, -1, -1, -1, -1, 10	^-------------------------------------------------^
-61	ss, 1 dl 				:	-1, -1, -1, -1, 10, -1, -1, -1	v------ seat subassembly + back in progress ------v
-62	ss, 1 tb 				:	10, -1, -1, -1, -1, -1, -1, -1
-63	ss, 1 dl, 1 tb 			:	10, -1, -1, -1, 10, -1, -1, -1
-64	ss, 1 dl, 2 tb 			:	10, -1, -1, -1, -1, -1, -1, -1
-65	ss, 2 dl, 1 tb 			:	-1, -1, -1, -1, 10, -1, -1, -1
-66	ss, 2 dl, 2 tb 			:	-1, -1, -1, -1, -1, 10, 10, -1
-67	ss, 2 dl, 2 tb, ld 		:	-1, -1, -1, -1, -1, -1, 10, -1
-68	ss, 2 dl, 2 tb, bk 		:	-1, -1, -1, -1, -1, 10, -1, -1
-69	ss, 2 dl, 2 tb, ld, bk	:	-1, -1, -1, -1, -1, -1, -1, 10	^-------------------------------------------------^
-70	chair 					:	-1, -1, -1, -1, -1, -1, -1, -1
-
-
-Each action, if correct, would transition the task into a new valid state. Incorrect actions are cancelled by human (no progress in task)
-
-The Q-learning formula depends on being able to estimate the future value, which is max{a}(Q[state at next time step]).
-Some of the actions lead to a valid next state. For those, we can provide a transition table. For those that don't, max{a}(Q[next state]) = -1
-The whole system is a little contrived right now because the reward matrix basically provides binary rewards. So future rewards dont't
-really need to be taken into account. But humans with sophisticated preferences could add nuance to the valid actions and provide real learning.
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ TRANSITION MATRIX (S,A --> S') ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-								dl  fb  bb  st  tb  ld  bk  hd
-							----------------------------------
-0	nothing					:	 1,  2,  3, -1, 27, -1, -1, -1
-1	1 dl					:	-1,  4,  5, -1, 28, -1, -1, -1	v----- seat in progress -----v
-2	1 fb 					:	 4, -1, -1, -1, -1, -1, -1, -1
-3	1 bb 					:	 5, -1, -1, -1, -1, -1, -1, -1
-4	1 dl, 1 fb 				:	 6,  8, 10, -1, -1, -1, -1, -1
-5	1 dl, 1 bb 				:	 7, 10,  9, -1, -1, -1, -1, -1
-6	2 dl, 1 fb 				:	-1, 11, 13, -1, -1, -1, -1, -1
-7	2 dl, 1 bb 				:	-1, 13, 12, -1, -1, -1, -1, -1
-8	1 dl, 2 fb 				:	11, -1, -1, -1, -1, -1, -1, -1
-9	1 dl, 2 bb 				:	12, -1, -1, -1, -1, -1, -1, -1
-10	1 dl, 1 fb, 1 bb 		:	13, -1, -1, -1, -1, -1, -1, -1
-11	2 dl, 2 fb 				:	14, -1, 17, -1, -1, -1, -1, -1
-12	2 dl, 2 bb 				:	15, 18, -1, -1, -1, -1, -1, -1
-13	2 dl, 1 fb, 1 bb 		:	16, 17, 18, -1, -1, -1, -1, -1
-14	3 dl, 2 fb 				:	-1, -1, 19, -1, -1, -1, -1, -1
-15	3 dl, 2 bb 				:	-1, 20, -1, -1, -1, -1, -1, -1
-16	3 dl, 1 fb, 1 bb 		:	-1, 19, 20, -1, -1, -1, -1, -1
-17	2 dl, 2 fb, 1 bb 		:	19, -1, -1, -1, -1, -1, -1, -1
-18	2 dl, 1 fb, 2 bb 		:	20, -1, -1, -1, -1, -1, -1, -1
-19	3 dl, 2 fb, 1 bb 		:	21, -1, 23, -1, -1, -1, -1, -1
-20	3 dl, 1 fb, 2 bb 		:	22, 23, -1, -1, -1, -1, -1, -1
-21	4 dl, 2 fb, 1 bb 		:	-1, -1, 24, -1, -1, -1, -1, -1
-22	4 dl, 1 fb, 2 bb 		:	-1, 24, -1, -1, -1, -1, -1, -1
-23	3 dl, 2 fb, 2 bb 		:	24, -1, -1, -1, -1, -1, -1, -1
-24	4 dl, 2 fb, 2 bb 		:	-1, -1, -1, 25, -1, -1, -1, -1
-25	4 dl, 2 fb, 2 bb, st 	:	-1, -1, -1, -1, -1, -1, -1, 26
-26	st 						:	61, -1, -1, -1, 62, -1, -1, -1	^------------------------------^
-27	1 tb 					:	28, -1, -1, -1, -1, -1, -1, -1	v------ back in progress ------v
-28	1 dl, 1 tb 				:	30, -1, -1, -1, 29, -1, -1, -1
-29	1 dl, 2 tb 				:	31, -1, -1, -1, -1, -1, -1, -1
-30	2 dl, 1 tb 				:	-1, -1, -1, -1, 31, -1, -1, -1
-31	2 dl, 2 tb 				:	-1, -1, -1, -1, -1, 32, 33, -1
-32	2 dl, 2 tb, ld 			:	-1, -1, -1, -1, -1, -1, 34, -1
-33	2 dl, 2 tb, bk 			:	-1, -1, -1, -1, -1, 34, -1, -1
-34	2 dl, 2 tb, ld, bk 		:	-1, -1, -1, -1, -1, -1, -1, 35
-35	bs 				 		:	36, 37, 38, -1, -1, -1, -1, -1	^------------------------------^
-36	bs, 1 dl				:	-1, 39, 40, -1, -1, -1, -1, -1	v------ back subassembly + seat in progress ------v
-37	bs, 1 fb 				:	39, -1, -1, -1, -1, -1, -1, -1
-38	bs, 1 bb 				:	40, -1, -1, -1, -1, -1, -1, -1
-39	bs, 1 dl, 1 fb 			:	41, 43, 45, -1, -1, -1, -1, -1
-40	bs, 1 dl, 1 bb 			:	42, 45, 44, -1, -1, -1, -1, -1
-41	bs, 2 dl, 1 fb 			:	-1, 46, 48, -1, -1, -1, -1, -1
-42	bs, 2 dl, 1 bb 			:	-1, 48, 47, -1, -1, -1, -1, -1
-43	bs, 1 dl, 2 fb 			:	46, -1, -1, -1, -1, -1, -1, -1
-44	bs, 1 dl, 2 bb 			:	47, -1, -1, -1, -1, -1, -1, -1
-45	bs, 1 dl, 1 fb, 1 bb 	:	48, -1, -1, -1, -1, -1, -1, -1
-46	bs, 2 dl, 2 fb 			:	49, -1, 52, -1, -1, -1, -1, -1
-47	bs, 2 dl, 2 bb 			:	50, 53, -1, -1, -1, -1, -1, -1
-48	bs, 2 dl, 1 fb, 1 bb 	:	51, 52, 53, -1, -1, -1, -1, -1
-49	bs, 3 dl, 2 fb 			:	-1, -1, 54, -1, -1, -1, -1, -1
-50	bs, 3 dl, 2 bb 			:	-1, 55, -1, -1, -1, -1, -1, -1
-51	bs, 3 dl, 1 fb, 1 bb 	:	-1, 54, 55, -1, -1, -1, -1, -1
-52	bs, 2 dl, 2 fb, 1 bb 	:	54, -1, -1, -1, -1, -1, -1, -1
-53	bs, 2 dl, 1 fb, 2 bb 	:	55, -1, -1, -1, -1, -1, -1, -1
-54	bs, 3 dl, 2 fb, 1 bb 	:	56, -1, 58, -1, -1, -1, -1, -1
-55	bs, 3 dl, 1 fb, 2 bb 	:	57, 58, -1, -1, -1, -1, -1, -1
-56	bs, 4 dl, 2 fb, 1 bb 	:	-1, -1, 59, -1, -1, -1, -1, -1
-57	bs, 4 dl, 1 fb, 2 bb 	:	-1, 59, -1, -1, -1, -1, -1, -1
-58	bs, 3 dl, 2 fb, 2 bb 	:	59, -1, -1, -1, -1, -1, -1, -1
-59	bs, 4 dl, 2 fb, 2 bb 	:	-1, -1, -1, 60, -1, -1, -1, -1
-60	bs, 4 dl, 2 fb, 2 bb, st:	-1, -1, -1, -1, -1, -1, -1, 70	^-------------------------------------------------^
-61	ss, 1 dl 				:	-1, -1, -1, -1, 63, -1, -1, -1	v------ seat subassembly + back in progress ------v
-62	ss, 1 tb 				:	63, -1, -1, -1, -1, -1, -1, -1
-63	ss, 1 dl, 1 tb 			:	65, -1, -1, -1, 64, -1, -1, -1
-64	ss, 1 dl, 2 tb 			:	66, -1, -1, -1, -1, -1, -1, -1
-65	ss, 2 dl, 1 tb 			:	-1, -1, -1, -1, 66, -1, -1, -1
-66	ss, 2 dl, 2 tb 			:	-1, -1, -1, -1, -1, 67, 68, -1
-67	ss, 2 dl, 2 tb, ld 		:	-1, -1, -1, -1, -1, -1, 69, -1
-68	ss, 2 dl, 2 tb, bk 		:	-1, -1, -1, -1, -1, 69, -1, -1
-69	ss, 2 dl, 2 tb, ld, bk	:	-1, -1, -1, -1, -1, -1, -1, 70	^-------------------------------------------------^
-70	chair 					:	-1, -1, -1, -1, -1, -1, -1, -1
-
-
-
-
-
-
-Reward matrix with +/-/0 reward for every state transition ('inv' for invalid transitions)
-R = [['inv', 'inv', 'inv', 'inv',     0,  'inv'],
- 	 ['inv', 'inv', 'inv',     0, 'inv',    100],
- 	 ['inv', 'inv', 'inv',     0, 'inv',  'inv'],
- 	 ['inv',     0,     0, 'inv',     5,  'inv'], # [3,4] was 0
- 	 [    0, 'inv', 'inv',     0, 'inv',    100],
- 	 ['inv',     0, 'inv', 'inv',     0,    100]]
-Slightly altered sample graph from http://mnemstudio.org/path-finding-q-learning-tutorial.htm
-
-
-
-
-
 Tweaks:
 2. Adjust state redirection (currently self-loop, could do "human picks" the next state (select from valid next states))
 3. Adust e-greedy selection strategy
 	I notice it takes a little longer to converge (200 trials) but that's just because we're demanding high level of convergence, where all sub-optimal-paths have to be the same. Either we're waiting until Q completion, or we're waiting until a lucky block with all exploitation down pre-filled paths. Either way, good performance should arise much sooner than 200.
-6. Introduce preferences for more rich learning (future rewards outweighing current ones)
 
 CORINA'S SUGGESTIONS:
 x 1. Do explore vs exploit with some epslion greedy
 	Currently using e = max(0.1, 1/(trial number + 1))
 2. Run some numbers and collect some stats
-3. Start tweaking reward based on some preferences. See if I can get the robot to match preference
+x 3. Start tweaking reward based on some preferences. See if I can get the robot to match preference
 4. Could build reward matrix to reflect future rewards outweighing current rewards
 
 GAME PLAN:
 Optimize this Q learning system and try to get it down to as few trials as possible (20). Then get it working on the robot and train it in person
+
+
+
+Fix string to int conversion in human web interface input 
+
+Add red button on web hi for "Error, I meant to press the red button on bot" to add -1 to matrix. Could use arbitrary state system to allow the transition. But even then that's pointless because it takes the human into states she didn't want to reach, and wastes exploration time on states that will never be revisited. If an action is so bad as to be rejected and never taken again, it should be undone by the robot on the spot.
+
+Simple multi-armed bandit.
+For comparison slide:
+Log helpfulness over trials with different exploit-explore strategies. Fast initial growth is our primary goal, with long-term optimization a secondary goal 
+Helpfulness = total reward for trial
+1. Some naive (all explore, or first exploit then explore)
+2. Epsilon-greedy (diminishing to 10%)
+3. Proportional to existing rewards, maybe biasing to unexplored options. Wait that doesn't really make sense, if you're exploiting you should take the max of known options. If you're exploring try something new. No randomness in reward for a particular state so 1 explore gives perfect info. 
+4. Greedy exploit with likelihood of exploring (choosing an unexplored (0)
+possibility) inversely proportional to quality of current best found option. If best is a 1, 10% chance of exploiting. If best is 10, 100% chance of exploiting.
+
+Run these all in simulation! Just tally total reward and output
+
+Background could compare other learning methods (ANN, reinforcement) and explain why I chose Q (fast to good-enough outcomes). We're trying to make a robot mimic a human partner that figures out what its teammate wants after just a few trials, and then might gradually refine the support 
+
+Code snippet of exploit/explore function 
 
 
 CONTROLLING BAXTER
@@ -334,61 +49,11 @@ On that computer create a ros_devel_ws (a ros workspace). Create my own version 
 
 
 
-DATA COLLECTION
-Exploit-Explore with e = max(0.1, 1/(trial number + 1)):
-	Trials to full convergence (block size 10):
-		230
-		100
-		110
-		160
-		150
-		200
-		250
-		80
-		170
-		70
-		170
-		110
-Random selection:
-	Trials to full convergence (block size 10):
-		100
-		110
-		130
-		100
-		100
-		110
-		130
-		130
-		170
-		140
-		120
-		120
-Max of current Q selection:
-	Trials to full convergence (block size 10):
-		30 every time
-			*But Q matrix is incomplete. Pattern is determined by initial guess and it will never try other equally valid paths after the first one
-Exploit-Explore with e = max(0.5, 1/(trial number + 1)) (basically e = .5:
-	Trials to full convergence (block size 10):
-		280
-		400
-		370
-		300
-		210
-		270
-		290
-		310
-		200
-		240
-		210
-		200
-
 
 
 I should do a bunch of trials where we check for when the Q matrix guides to the right answer (following max) for each of the strategies. Some of the high-absolute strategies might have a good inexact performance.
 
-I should do 2 levels of preference (kind of like, really like) for the human to specify. 10 and 5 in reward matrix, something like tap and double tap on the green button on robot. To show that the robot will learn more nuanced preferences
-
-Ask Corina how I can listen for multiple button presses to show variation in positive reward
+I should do TEN levels of preference (kind of like, really like) for the human to specify. Shows that the robot will learn more nuanced preferences
 
 Reward   | Input
 ---------|------
@@ -406,101 +71,23 @@ Acceptance with low approval will be subsumed by high-approval options
 
 
 
+Let's compare four versions of exploit-explore:
+1. EXPLORE FIRST. Explore every possibility until none are unexplored, then exploit.
+2. EPSILON-GREEDY. At every stage, 33% chance explore, 67% chance exploit.
+3. EPSILON-DECREASING. In early trials, explore all the time, gradually diminishing to 10% explore.
+4. REWARD-PROPORTIONAL. Likelihood of exploiting best option is proportional to quality of best option found. If best is 1, 10% chance to exploit it. If best is 10, 100%. If all 0s or -1s, guaranteed explore. 
 
-using Baxter
------------
+3 Variations of each:
+A. explore chooses randomly from all nonnegative									- inefficient for strategy 1
+B. explore chooses randomly only from unexplored; if none, choose randomly			- N/A for strategy 1
+C. explore chooses randomly only from unexplored; if none, exploit
 
+	
 
-~~~terminal in ros_devel_ws~~~
-./baxter.sh
-untuck
-roslaunch hrc_learning hrc_learning.launch
-~~~~~~~~~new terminal~~~~~~~~~
-./baxter.sh
-rosrun hrc_learning controller.py
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-WHEN CONTROLLER IS NOT FOUND OR NOT EXECUTABLE
-1. chmod +x controller.py
-2. LINUX-STYLE LINE ENDINGS (shebang not read correctly)
-3. (maybe) rebuild catkin package (make sure to only build mine, not everyone's). Seems to not be necessary at least after changing line endings
+When exploring, 3 possible strategies:
+	Choose randomly from all options (stupid)
+	Choose randomly from all nonnegative options (not invalid)
+	Choose randomly from all zero options (unexplored). Downside is the robot will never try mediocre help more than once which could blind it to big rewards down a mediocre path. But I think the high-level task itself is well-suited for assuming that mediocre actions in this state are not optimal later on. That is, human will not say, "I don't like this particualar action very much but I want you to keep doing it here because it will take us to a state I like a lot later on." Instead, they will rate that move highly. In discussion of downsides, talk about flatness of learning and how the scenario tends to flatten consideration of future rewards.
 
 
-Log into scazlab
-password is baxter
-Just switch onto a different workspace if people have left stuff open
-Try not to leave stuff open in others' way
-Everything is in home/ros_devel_ws (one common shared workspace for all users)
-Inside the workspace are a bunch of packages for individual projects.
-human_robot_collaboration. I might but probably don't need to include task-models 
-A bunch of packages are in there; don't modify existing but rather extend if necessary in my own package
-All the packages are catkin packages with a package.xml file inside. It's also a python package with setup.py
-I should mimic that setup.py
-In web browser check out catkin cheat sheet and quick start video
-Nav to src, and go catkin - create package. Name package. That folder will have CMakeLists.txt and package.xml
-Mimic hrc_pred_supp_bhv (Corina's package)
-The main stuff is in the folder with the same name inside the package. Local libraries in there. Each has an __init__.py and __init__.pyc. Typical organization is a bunch of subfolders conceptually divided. These are all the things you need to import. Local libraries have AI and algorithm stuff. Controller in scripts is like manager that calls various things.
-Somewhere else in catkin/python package is scripts folder. Contains controller.py
-Package is locally installed. Not sure if buiding catkin is enough or if you have to also install using python. Python method is pip install -e <path>. Path is to top level package she thinks. Will install in development mode which adds the package path to pythonpath. Better pratice than adding the path to pythonpath from within the script itself.
-If it doesn't work right after you build catkin package, then use pip install -e <path>. Can know if it worked or not based on whether or not you get an import error.
-Don't need rosbag.launch
-Do need [package name].launch
-Mimic corina's launch file. Has dependencies for controller and object IDs. Has rosbridge websocket (necessary) and text-to-speech (not so necessary) dependencies too. Might just be ok copy pasting that file wholesale
-Don't need models.
-
-First thing is to turn on robot (white power button on back)
-home/corina_local has commands.txt as a cheat sheet for sending commands
-Always cd into ros_devel_ws
-First: $ ./baxter.sh
-That connects with roscore running on robot
-Always send command 'untuck' to make sure we are communicating. At the end, after you ctrl-C your own controller, send 'tuck' and then press the button behind to turn off robot.
-Next, build catkin package if you changed anything. (new terminal for convenience): catkin build hrc_learning
-	Skip rosrun server 
-	Skip roslaunch rosbag (if I'm not using rosbag to record stuff)
-Third: roslaunch <name of package> <name of launch file>
-	   roslaunch hrc_learning hrc_learning.launch
-GREEN LIGHT: Fourth: rosrun <name of package> controller.py
-					 rosrun hrc_learning controller.py
-
-Take action
-self._action actually controls the robot
-
-I can call my class however, but make sure it extendes BaseController
-call super(args) to initialize base fields of BaseController
-I definitely need:
-	def _run(self):  # overrides _run in basecontroller
-don't really need anything else. self._action is a member of the base controller class. take_action would probably be useful too.
-At the bottom we create an instance of controller with stuff
-Then have controller.run (no underscore) at end
-Base controller will print out error messages. Everything is logged
-r.response has everything, including button feedback.
-
-Start with simple action. Just take the same thing every time.
-There might be a bit of extra info in the readme on github
-
-To test actions directly from terminal, use rosservice call /action_provider...left "{action...
-Can send a list of a few object ids and it will choose randomly.
-
-It seems like there are some issues on the computer...
-1. rosbridge wasn't being found. Take out rosbridge from launch file for now. If you need it, add it, if errors, get help from Alessandro. rosbridge is used to send stuff to webpage via ros.
-2. data logger wasn't found (part of rosbag). If that's a problem, remove all references to rosbag from my code (I'm probably not using rosbag)
-3. No modulename ros_speech2text. Again, if necessary remove all speech references
-4. Sometimes you can't tuck at end (happens when you ctrl-c launch file). Have to restart robot to tuck. Try to avoid ctrl-cing the launch file a lot.
-
-don't need to rebuild package every time controller is modified. 
-If you rebuild the package, you have to restart the launch file after
-
-If you make any changes to core code in path, you have to rebuild workspace. But launch file doesn't have to build anything in scripts, so you don't have to rebuild.
-
-remove references to speech and rosbag in launch file as well
-
-AI part of code is in local 
-If I need to save anything, I save it in models. At the beginning, in controller, say go in models and look for the pickle file. If not there, then go to local library, go and train it, and save it in local library, and load it up.
-
-At the end save all files, ctrl-c all terminals but one. Should probably ctrl-c the controller first. Really should make controller so it terminates nicely. 'tuck' in final terminal, then ctrl-c. If it does't work, then turn off and wait for arms to go down and it to quiet down. Then turn on again and wait a while. Then untuck, tuck and turn off.
-Nice to 'exit' script at very end, close windows and terminals
-Don't turn off computer, just lock it.
-
-Slack Alessandro, Olivier, Corina if any issues
-Or pop by A and O's office
+show a bunch of different preferences that work

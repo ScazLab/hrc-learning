@@ -96,9 +96,8 @@ Result: slightly higher initial shelf, but takes longer to get there. 10 is bett
 ******I WILL RUN EPSILON DECREASING A WITH BAXTER*****
 ******************************************************
 
-Eventually we can uncomment the text-to-speech stuff if we want
-Improvement: make it so baxter remembers when he's used both of one kind of bracket so he doesn't keep plaintively grabbing the air
-Should absolutely export Q matrix	
+Eventually we can uncomment the text-to-speech stuff for the final demo afer Q is built
+Improvement: make it so baxter remem
 	
 PROP is Quirky because any option with value > 10 will always be exploited. Very arbitrary threshold. (issues with heavy backprop reinforcing a medium-grade option and shutting out a better one). Happened to perform well for this setup, but not generalizable
 

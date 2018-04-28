@@ -5,6 +5,7 @@
 import sys
 import random
 import copy
+import pickle
 
 NSTATES = 71	# number of states
 NACTIONS = 8	# number of actions
@@ -110,8 +111,8 @@ def goodrun(total_reward):
 
 # run 250 iterations of 250 trials each, with a certain epsilon function and a certain variation, logging the total reward for each trial in each iteration
 def analyze(R, T, var):
-	f = open("epsilondecreasingALT" + var + ".csv", 'w')
-	for iteration in range(250):
+	# f = open("epsilondecreasingALT" + var + ".csv", 'w')
+	for iteration in range(1):
 		# print("Starting iteration" + iteration)
 		Q = [[0 for j in range(NACTIONS)] for i in range(NSTATES)] # Initialize matrix Q to 0s
 
@@ -142,12 +143,15 @@ def analyze(R, T, var):
 
 			# end of trial
 			# print("total reward:" + str(total_reward))
-			f.write(str(total_reward))
-			f.write(',')
+			# f.write(str(total_reward))
+			# f.write(',')
 		# end of iteration
-		f.write('\n')
+		# f.write('\n')
+		# with open('Qdump.pickle', 'wb') as handle:
+		# 	pickle.dump(Q, handle, protocol=2)
 	# end of all 200 iterations
-	f.close()
+	# f.close()
+	
 
 # slim version of best_seq that just finds the total reward of the max path through Q. If matrix guides to invalid moves, return a low reward (-1)
 def check_seq(Q, T, R):
@@ -461,19 +465,25 @@ T = [[ 1,  2,  3, -1, 27, -1, -1, -1],
 
 # Q, ntrials = fullconvergeQ(R, T)
 
-# best_actions, best_path, total_reward = best_seq(Q, T, A, R)
+with open('Qdump.pickle', 'rb') as handle:
+    Q = pickle.load(handle)
+
+best_actions, best_path, total_reward = best_seq(Q, T, A, R)
 # print("Done learning. Q:")
 # printmat(Q)
 # print("N trials: %d" % ntrials)
-# print("Total reward: %d" % total_reward)
-# sys.stdout.write("Optimal actions: ")
-# print(best_actions)
-# sys.stdout.write("State sequence of those: ")
-# print(best_path)
+print("Total reward: %d" % total_reward)
+print("Optimal actions: ")
+print(best_actions)
+print("State sequence of those: ")
+print(best_path)
 
-analyze(R, T, 'A')
+
+# analyze(R, T, 'A')
 # analyze(R, T, 'B')
 # analyze(R, T, 'C')
+
+
 
 # Two major conceptual problems:
 # 1. What to do after bad action. It doesn't advance trials. Options:

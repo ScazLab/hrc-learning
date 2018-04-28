@@ -89,8 +89,16 @@ GREEDY variants grow to a shelf (135) in 2 trials, but take a while (~50t) to cu
 DECREASING also tail at 163 but with a higher initial shelf (158) that takes longer (10t) to get to.
 PROPORTIONAL tails at 168 with a rounded shelf around (5t, 152).
 
-epdecreasing A I like. Let's try with a little more exploration (5 more trials)
+epdecreasing A I like. Let's try with a little more exploration (15 instead of 10 to .1)
+Result: slightly higher initial shelf, but takes longer to get there. 10 is better.
 
+******************************************************
+******I WILL RUN EPSILON DECREASING A WITH BAXTER*****
+******************************************************
+
+Eventually we can uncomment the text-to-speech stuff if we want
+Improvement: make it so baxter remembers when he's used both of one kind of bracket so he doesn't keep plaintively grabbing the air
+Should absolutely export Q matrix	
 	
 PROP is Quirky because any option with value > 10 will always be exploited. Very arbitrary threshold. (issues with heavy backprop reinforcing a medium-grade option and shutting out a better one). Happened to perform well for this setup, but not generalizable
 

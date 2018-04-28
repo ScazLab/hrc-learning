@@ -18,7 +18,7 @@ from rospy.numpy_msg import numpy_msg
 
 from human_robot_collaboration.controller import BaseController
 from svox_tts.srv import Speech, SpeechRequest
-#from hrc_pred_supp_bhv.service_request import ServiceRequest, finished_request
+# from hrc_pred_supp_bhv.service_request import ServiceRequest, finished_request
 from hrc_pred_supp_bhv.task_def import *
 from hrc_pred_supp_bhv.srv import *
 from hrc_pred_supp_bhv.bern_hmm.bernoulli_hmm import *
@@ -28,7 +28,7 @@ NSTATES = 71    # number of states
 NACTIONS = 8    # number of actions
 STARTSTATE = 0  # starting state, if we even care
 ENDSTATE = 70   # end state, assuming are using a predefined end
-GAMMA = .9      # Q learning discount factor for future rewards
+GAMMA = .3      # Q learning discount factor for future rewards
 
 
 parser = argparse.ArgumentParser("Run the autonomous controller for bern_hmm_preds")
@@ -104,7 +104,7 @@ class QController(BaseController):
     HOLD_LEG = 'hold_leg'
     HOLD_TOP = 'hold_top'
     HOLD = 'hold_leg'
-    WEB_INTERFACE = '/hrc_pred_supp_bhv/web_interface/pressed'
+    WEB_INTERFACE = '/hrc_learning/web_interface/pressed'
     OBS_TALKER = '/hmm_bern_preds/obs'
     TTS_DISPLAY = '/svox_tts/speech_output'
     TTS_SERVICE = '/svox_tts/speech'
@@ -118,6 +118,12 @@ class QController(BaseController):
     # ACTION_PROB_THRESH = 0.5
 
     # Transition Matrix: (s,a) --> s'
+    # THIS IS NOT DOMAIN KNOWLEDGE. It's a shorthand for keeping track of the state of the world.
+    # Every row is a state (vector of objects on the table) and each column is an action that changes that state.
+    # The -1 entries are actions that would lead to out-of-bound states (for sanity, I only mapped the states
+    # reachable in the task model and just ensured that the human player follow the rules of the task)
+    # This is easily expandable to a system where the robot keeps track of the objects on the table and knows how each action changes them (since almost all actions simply add an object)
+    # Such a system allows the human player to set their own rules and teach the robot to assist in any task.
     T = [[ 1,  2,  3, -1, 27, -1, -1, -1],
          [-1,  4,  5, -1, 28, -1, -1, -1],
          [ 4, -1, -1, -1, -1, -1, -1, -1],
@@ -194,7 +200,7 @@ class QController(BaseController):
         super(QController, self).__init__(
             left=True,      # initialize fields in BaseController
             right=True,
-            speech=False,
+            speech=True,
             listen=True,
             recovery=True,
             timer_path=os.path.join(path, timer_path),
@@ -342,7 +348,7 @@ class QController(BaseController):
         m = max(lst)
         l = [i for i, v in enumerate(lst) if v == m]
         return random.choice(l)
-        
+
     # returns the index of one of the positive values in a list, chosen randomly. If no positive values, choose randomly.
     def rand_idx_noneg(self, lst):
         l = [i for i, v in enumerate(lst) if v >= 0]
@@ -351,36 +357,51 @@ class QController(BaseController):
             return randrange(len(lst))
         return random.choice(l)
 
-    def exploitexplore(self, options, e):
-        r = random.random()
-        if r > e:
-            return self.rand_idx_max(options)   # Exploit: pick (one of) the best
-        else:
-            return self.rand_idx_noneg(options) # Explore: pick one of the nonnegative options (so as not to retread invalid moves). Could also just pick one of the zero (unexplored) options
+    def epsilondecreasing(self, options, trial, var):
+    e = max(.1, (10-trial)/10) # 1, .9, .8, .7, .6, .5, .4, .3, .2, .1, .1, .1, .1, ...
+    r = random.random()
+    if r > e:                        # Exploit: pick (one of) the best
+        return rand_idx_max(options)
+    else:                            # Explore
+        unexplored = [i for i, v in enumerate(options) if v == 0]
+        nonneg     = [i for i, v in enumerate(options) if v >= 0]
+        if var == 'A':
+            return random.choice(nonneg)    # A: pick randomly
+        if unexplored:
+            return random.choice(unexplored) # BC: try to pick from unexplored
+        if var == 'B':
+            return random.choice(nonneg) # B (pick randomly)
+        return rand_idx_max(options)     # C (exploit after all)
 
     # Full program
     def _run(self):
-        
+
         # self.rosbag_start()
-        throwaway = self.prep_model()
-            
+        print("Please click a button on the web interface to confirm connection.")
+        self.human_feedback()
+
+        # speech test
+        self._robot_speech(sentence='Ready to go!')
+
         print("Starting learning iterations...")
         Q = [[0 for j in range(NACTIONS)] for i in range(NSTATES)] # Initialize matrix Q to 0s
         trial = 0
 
         while (True):    # keep running trials until user says to stop
+            self._robot_speech(sentence='Are you ready?')
             greenlight = raw_input("Ready to start new trial. Continue? (enter 'y' to run a trial, anything else to quit)")
             if greenlight != 'y':
-                break            
-            
+                break
+
             # begin trial
             trial = trial + 1
             eps = max(0.1, 1/(trial+1))
             current_state = STARTSTATE
 
             while (current_state != ENDSTATE):
+                print("state: " + current_state)
                 # begin one state-action step
-                actionid = self.exploitexplore(Q[current_state], eps)  # 2. Use existing Q matrix to pick an action (exploit-explore)
+                actionid = self.epsilondecreasing(Q[current_state], trial, 'A')  # 2. Use existing Q matrix to pick an action (exploit-explore)
                 action = self.name_action(actionid)                     # string name of action
                 # !! maybe should use state update behavior in complete_robot_action instead of simple take_action
                 green, obj_taken_idx = self.take_action(action) # 3. Perform action up until human feedback
@@ -388,37 +409,38 @@ class QController(BaseController):
                 if green:       # success
                     next_state = self.T[current_state][actionid]              # use T matrix to know next state. Equivalent of dead reckoning obj_state system. Better practice might be to put this T matrix in another file
 #                    self.update_obj_state(green, action, object_action_idx) # assuming this updates mental map of what's on the table. I can maybe replace it with T matrix
-                
+
                     if next_state == -1:
                         print("ERROR: Human accepted invalid action")
                         exit()
                         # !! in the future I could maybe eliminate T matrix and use the existing obj state infrastructure to keep track. But not central to project
-                    
+
                     # reward = 10
+                    # self._robot_speech(sentence='How useful was that?')
                     reward = self.human_feedback()
-                    if reward != '1' and reward != '2' and reward != '3' and reward != '4' and reward != '5' and reward != '6' and reward != '7' and reward != '8' and reward != '9' and reward != '10':
-                        print("ERROR: non-numeric reward received")
-                    reward = int(reward) # convert to int
                     if reward == 0:
                         print("Error: web feedback gave 0")
                         exit()
-                        
+
                     # Update Q matrix with positive reward
                     Q[current_state][actionid] = reward + GAMMA * (max(Q[next_state]) if next_state != -1 else -1) # !!! -1 case in here could mask errors
 
                     current_state = next_state
                 else:           # failure
                     print("Red button or grasper error")
+                    # self._robot_speech(sentence='I will never do that again.')
                     # do not update state model or move through T matrix
                     reward = -1
                     Q[current_state][actionid] = reward # no account for future because there is no future after an invalid move
 
                 print("done with state-action step")
                 print(Q)
-                
+
             print("done with trial (reached end state)")
+            self._robot_speech(sentence='Finished!')
 
         print("done with all trials (user decided to quit). Rospy signal shutdown")
+        self._robot_speech(sentence='Goodbye!')
         rospy.signal_shutdown("End of task.")
 
 
@@ -494,22 +516,23 @@ class QController(BaseController):
     def _robot_speech(self, sentence):
         self.tts_service(mode=5, string=sentence)
         self.tts_display.publish(sentence)
-        rospy.sleep(1.5)
+        rospy.sleep(0.2)
 
     # human to take any action online
     # use html page in folder to put my own buttons in
     # ! reponses published on a channel (continuously read)
     def human_feedback(self):
-        raw_input("Give human feedback...")
+        print("Waiting for human feedback...")
         self.human_input = None
         rating = 0
-        
+
         while self.human_input == None: # wait until meaningful input
             rospy.Subscriber(self.WEB_INTERFACE, String, self.web_interface_callback)
             rospy.rostime.wallsleep(0.5)
         if self.human_input != 'error':
             rating = self.human_input
-        
+
+
       #  while self.human_input != 'next': # ! whatever string is on the button that you pressed
       #      rospy.Subscriber(self.WEB_INTERFACE, String, self.web_interface_callback)
       #      print("got human_input ", self.human_input)
@@ -519,67 +542,78 @@ class QController(BaseController):
       #      if self.human_input == 'hold' and self.human_input not in actions_requested:
       #          actions_requested.append(self.human_input)
       #      rospy.rostime.wallsleep(0.5)
-        print("got human_input rating")
+        print("got human feedback: " + rating)
+        if rating != '1' and rating != '2' and rating != '3' and rating != '4' and rating != '5' and rating != '6' and rating != '7' and rating != '8' and rating != '9' and rating != '10':
+            print("ERROR: non-numeric rating received")
+        rating = int(rating) # convert to int
+
+        if rating < 4:
+            self._robot_speech(sentence='I\'ll try to find a better option next time.')
+        elif rating > 7:
+            self._robot_speech(sentence='You\'re very welcome!')
+        else:
+            self._robot_speech(sentence='I think I can do better.')
+
         return rating
 
-    def complete_robot_action(self, action):
-        action_taken = 0
+    # def complete_robot_action(self, action):
+    #     action_taken = 0
 
-        print("STATE OF OBJECTS BEFORE PREDICTION ")
-        for key in sorted(self.obj_state.keys()):
-            print("{}: {}".format(key, self.obj_state[key]))
+    #     print("STATE OF OBJECTS BEFORE PREDICTION ")
+    #     for key in sorted(self.obj_state.keys()):
+    #         print("{}: {}".format(key, self.obj_state[key]))
 
-        # if action == 'br_scrdrv':
-        #     action = 'br_screwdriver'
-        # elif action == 'br_front_brackets':
-        #     action = 'br_front_bracket'
-        # elif action == 'br_back_brackets':
-        #     action = 'br_back_bracket'
+    #     # if action == 'br_scrdrv':
+    #     #     action = 'br_screwdriver'
+    #     # elif action == 'br_front_brackets':
+    #     #     action = 'br_front_bracket'
+    #     # elif action == 'br_back_brackets':
+    #     #     action = 'br_back_bracket'
 
-        #raw_input("Press Enter to continue... ")
-        #action_taken = self.take_action(action)
-        #self.reset_dict()
-        #print("dict should be reset ", self.SUPP_BHVS)
-        #print("TAKE ROBOT ACTION ")
+    #     #raw_input("Press Enter to continue... ")
+    #     #action_taken = self.take_action(action)
+    #     #self.reset_dict()
+    #     #print("dict should be reset ", self.SUPP_BHVS)
+    #     #print("TAKE ROBOT ACTION ")
 
-        #action_taken = self.sim_take_action(action)
-        action_taken, object_action_idx = self.take_action(action)
-        print("action_taken ", action_taken)
+    #     #action_taken = self.sim_take_action(action)
+    #     action_taken, object_action_idx = self.take_action(action)
+    #     print("action_taken ", action_taken)
 
-        #self.reset_dict()
-        print("action_taken ", action_taken)
-        print("with br ", action)
-        print("in dict ", action in self.obj_state)
+    #     #self.reset_dict()
+    #     print("action_taken ", action_taken)
+    #     print("with br ", action)
+    #     print("in dict ", action in self.obj_state)
 
-        #self.sim_update_obj_state(action_taken, action)
-        #print("Taken object_action_idx ", object_action_idx)
-        if action_taken == 1:
-            self.update_obj_state(action_taken, action, object_action_idx)
-        else:
-            print("This was an error and we keep track")
+    #     #self.sim_update_obj_state(action_taken, action)
+    #     #print("Taken object_action_idx ", object_action_idx)
+    #     if action_taken == 1:
+    #         self.update_obj_state(action_taken, action, object_action_idx)
+    #     else:
+    #         print("This was an error and we keep track")
 
-        print("dict should have something ")
-        for key in sorted(self.obj_state.keys()):
-            print("{}: {}".format(key, self.obj_state[key]))
+    #     print("dict should have something ")
+    #     for key in sorted(self.obj_state.keys()):
+    #         print("{}: {}".format(key, self.obj_state[key]))
 
-        # print("last brought dict should have something ")
-        # for key in sorted(self.last_brought.keys()):
-        #     print("{}: {}".format(key, self.last_brought[key]))
+    #     # print("last brought dict should have something ")
+    #     # for key in sorted(self.last_brought.keys()):
+    #     #     print("{}: {}".format(key, self.last_brought[key]))
 
 
-        # raw_input("Take human action...")
-        # self.human_input = None
-        # while self.human_input != 'next':
-        #     rospy.Subscriber(self.WEB_INTERFACE, String, self.web_interface_callback)
-        #     print("got human_input ", self.human_input)
-        #     if self.human_input != None and self.human_input != 'cleanup':
-        #         if self.human_input in self.obj_state.keys():
-        #             self.obj_state[self.human_input] = 1
-        #     rospy.rostime.wallsleep(0.5)
-        # print("got human_input next ")
-        # print("JUST FINISHED PREDICTION FOR TIME STEP ", self.time_step)
+    #     # raw_input("Take human action...")
+    #     # self.human_input = None
+    #     # while self.human_input != 'next':
+    #     #     rospy.Subscriber(self.WEB_INTERFACE, String, self.web_interface_callback)
+    #     #     print("got human_input ", self.human_input)
+    #     #     if self.human_input != None and self.human_input != 'cleanup':
+    #     #         if self.human_input in self.obj_state.keys():
+    #     #             self.obj_state[self.human_input] = 1
+    #     #     rospy.rostime.wallsleep(0.5)
+    #     # print("got human_input next ")
+    #     # print("JUST FINISHED PREDICTION FOR TIME STEP ", self.time_step)
 
-        print("Move on to the next supp bhv for time step {}".format(self.time_step))
+    #     print("Move on to the next supp bhv for time step {}".format(self.time_step))
 
 
     # def sim_update_obj_state(self, action):

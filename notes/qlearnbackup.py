@@ -10,7 +10,7 @@ NSTATES = 71	# number of states
 NACTIONS = 8	# number of actions
 STARTSTATE = 0	# starting state, if we even care
 ENDSTATE = 70	# end state, assuming are using a predefined end
-GAMMA = .9		# Q learning discount factor for future rewards
+GAMMA = .3		# Q learning discount factor for future rewards
 BLOCKSIZE = 10	# how many iterations to do in a batch before checking convergence
 STREAKLEN = 5	# how many succesful trials in a row until Q matrix is good enough
 
@@ -41,35 +41,80 @@ def compmat(Qa, Qb):
 		return [["N/A"]]
 	return [[abs(Qa[i][j] - Qb[i][j]) for j in range(NACTIONS)] for i in range(NSTATES)]
 
-# Explore every possibility until none are unexplored, then exploit
-def explorefirst(Qrow, trial, var):
-	unexplored = [i for i, v in enumerate(Qrow) if v == 0]
+# Explore every possibility once until none are unexplored, then exploit
+def explorefirst(options, trial, var):
+	unexplored = [i for i, v in enumerate(options) if v == 0]
+	nonneg     = [i for i, v in enumerate(options) if v >= 0]
 	if unexplored:
 		if var == 'A':
-			return random.randrange(len(Qrow)) # return any random move
+			return random.choice(nonneg) # return any random nonneg move
 		else:							# var B or C. return one of unexplored
 			return random.choice(unexplored)
-	return rand_idx_max(Qrow) # Exploit: pick (one of) the best
+	return rand_idx_max(options) # Exploit: pick (one of) the best
 
 # chooses an action using epsilon-greedy strategy, where e is some small probability of exploring instead of exploiting
-def exploitexplore(options, e):
+def epsilongreedy(options, trial, var):
+	e = .2
 	r = random.random()
 	if r > e:
 		return rand_idx_max(options) # Exploit: pick (one of) the best
 	else:
-		return random.randrange(len(options)) # Explore: pick randomly
+		unexplored = [i for i, v in enumerate(options) if v == 0]
+		nonneg     = [i for i, v in enumerate(options) if v >= 0]
+		if var == 'A':
+			return random.choice(nonneg) # Explore: pick randomly
+		if unexplored:
+			return random.choice(unexplored)
+		if var == 'B':
+			return random.choice(nonneg) # Explore: pick randomly
+		return rand_idx_max(options) # C
+
+# In early trials, explore all the time, gradually diminishing to 10% explore.
+def epsilondecreasing(options, trial, var):
+	e = max(.1, (10-trial)/10) # 1, .9, .8, .7, .6, .5, .4, .3, .2, .1, .1, .1, .1, ...
+	r = random.random()
+	if r > e:
+		return rand_idx_max(options) # Exploit: pick (one of) the best
+	else:
+		unexplored = [i for i, v in enumerate(options) if v == 0]
+		nonneg     = [i for i, v in enumerate(options) if v >= 0]
+		if var == 'A':
+			return random.choice(nonneg) # Explore: pick randomly
+		if unexplored:
+			return random.choice(unexplored)
+		if var == 'B':
+			return random.choice(nonneg) # Explore: pick randomly
+		return rand_idx_max(options) # C
+
+# Likelihood of exploiting best option is proportional to quality of best option found.
+def epsilonproportional(options, trial, var):
+	m = max(options)
+	e = (10-m)/10 # chance of exploring
+	r = random.random()
+	if r > e:
+		return rand_idx_max(options) # Exploit: pick (one of) the best
+	else:
+		unexplored = [i for i, v in enumerate(options) if v == 0]
+		nonneg     = [i for i, v in enumerate(options) if v >= 0]
+		if var == 'A':
+			return random.choice(nonneg) # Explore: pick randomly
+		if unexplored:
+			return random.choice(unexplored)
+		if var == 'B':
+			return random.choice(nonneg) # Explore: pick randomly
+		return rand_idx_max(options) # C
 
 def goodrun(total_reward):
 	return total_reward == 170 # good run does 17 good actions with no detours or mistakes
 
-# run 100 iterations of 1000 trials each, with a certain epsilon function and a certain variation, logging the total reward for each trial in each iteration
+# run 250 iterations of 250 trials each, with a certain epsilon function and a certain variation, logging the total reward for each trial in each iteration
 def analyze(R, T, var):
-	f = open("epsilonfirst" + var + ".csv", 'w')
-	for iteration in range(1):
+	f = open("explorefirst" + var + ".csv", 'w')
+	for iteration in range(250):
 		# print("Starting iteration" + iteration)
 		Q = [[0 for j in range(NACTIONS)] for i in range(NSTATES)] # Initialize matrix Q to 0s
 
-		for trial in range(20):
+		for trial in range(250):
 			current_state = STARTSTATE					# Each episode starts from starting state
 			total_reward = 0
 			while (current_state != ENDSTATE):	# The robot keeps acting until it reaches end state. ! Maybe we don't need predefined end states
@@ -77,12 +122,12 @@ def analyze(R, T, var):
 				# action = random.randrange(NACTIONS)		# chooses next action randomly
 				# action = rand_idx_max(Q[current_state])	# chooses best next action (better than random). But doesn't explore, so might miss better possibilities
 				reward = R[current_state][action]
-				if trial == 19:
-					print(reward)
-					if reward != 10:
-						print("    cur state:" + str(current_state))
-						print("    action:" + str(action))
-						print(Q[current_state])
+				# if trial == 19:
+				# 	print(reward)
+				# 	if reward != 10:
+				# 		print("    cur state:" + str(current_state))
+				# 		print("    action:" + str(action))
+				# 		print(Q[current_state])
 
 				total_reward = total_reward + R[current_state][action] # -1 reward for each red button move. Matches T-matrix
 
@@ -95,7 +140,7 @@ def analyze(R, T, var):
 					Q[current_state][action] = -20
 
 			# end of trial
-			print("total reward:" + str(total_reward))
+			# print("total reward:" + str(total_reward))
 			f.write(str(total_reward))
 			f.write(',')
 		# end of iteration
@@ -425,8 +470,9 @@ T = [[ 1,  2,  3, -1, 27, -1, -1, -1],
 # sys.stdout.write("State sequence of those: ")
 # print(best_path)
 
-# analyze(R, T, 'A')
+analyze(R, T, 'A')
 analyze(R, T, 'BC')
+# analyze(R, T, 'C')
 
 # Two major conceptual problems:
 # 1. What to do after bad action. It doesn't advance trials. Options:

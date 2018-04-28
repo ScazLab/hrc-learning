@@ -71,7 +71,7 @@ def epsilongreedy(options, trial, var):
 
 # In early trials, explore all the time, gradually diminishing to 10% explore.
 def epsilondecreasing(options, trial, var):
-	e = max(.1, (10-trial)/10) # 1, .9, .8, .7, .6, .5, .4, .3, .2, .1, .1, .1, .1, ...
+	e = max(.1, (15-trial)/15) # 1, .9, .8, .7, .6, .5, .4, .3, .2, .1, .1, .1, .1, ...
 	r = random.random()
 	if r > e:
 		return rand_idx_max(options) # Exploit: pick (one of) the best
@@ -87,6 +87,7 @@ def epsilondecreasing(options, trial, var):
 		return rand_idx_max(options) # C
 
 # Likelihood of exploiting best option is proportional to quality of best option found.
+# Quirky because any option with value > 10 will always be exploited. Very arbitrary threshold. (issues with heavy backprop reinforcing a medium-grade option and shutting out a better one). Happened to perform well for this setup, but not generalizable
 def epsilonproportional(options, trial, var):
 	m = max(options)
 	e = (10-m)/10 # chance of exploring
@@ -109,7 +110,7 @@ def goodrun(total_reward):
 
 # run 250 iterations of 250 trials each, with a certain epsilon function and a certain variation, logging the total reward for each trial in each iteration
 def analyze(R, T, var):
-	f = open("epsilonproportional" + var + ".csv", 'w')
+	f = open("epsilondecreasingALT" + var + ".csv", 'w')
 	for iteration in range(250):
 		# print("Starting iteration" + iteration)
 		Q = [[0 for j in range(NACTIONS)] for i in range(NSTATES)] # Initialize matrix Q to 0s
@@ -118,7 +119,7 @@ def analyze(R, T, var):
 			current_state = STARTSTATE					# Each episode starts from starting state
 			total_reward = 0
 			while (current_state != ENDSTATE):	# The robot keeps acting until it reaches end state. ! Maybe we don't need predefined end states
-				action = epsilonproportional(Q[current_state], trial, var)	# biased choice favoring good options with some exploration
+				action = epsilondecreasing(Q[current_state], trial, var)	# biased choice favoring good options with some exploration
 				# action = random.randrange(NACTIONS)		# chooses next action randomly
 				# action = rand_idx_max(Q[current_state])	# chooses best next action (better than random). But doesn't explore, so might miss better possibilities
 				reward = R[current_state][action]
@@ -471,8 +472,8 @@ T = [[ 1,  2,  3, -1, 27, -1, -1, -1],
 # print(best_path)
 
 analyze(R, T, 'A')
-analyze(R, T, 'B')
-analyze(R, T, 'C')
+# analyze(R, T, 'B')
+# analyze(R, T, 'C')
 
 # Two major conceptual problems:
 # 1. What to do after bad action. It doesn't advance trials. Options:

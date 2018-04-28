@@ -75,14 +75,25 @@ Let's compare four versions of exploit-explore:
 1. EXPLORE FIRST. Explore every possibility until none are unexplored, then exploit.
 2. EPSILON-GREEDY. At every stage, e% chance explore, 1-e% chance exploit.
 3. EPSILON-DECREASING. In early trials, explore all the time, gradually diminishing to 10% explore.
-4. EPSILON-PROPORTIONAL. Likelihood of exploiting best option is proportional to quality of best option found. If best is 1, 10% chance to exploit it. If best is 10, 100%. If all 0s or -1s, guaranteed explore. 
+4. EPSILON-PROPORTIONAL. Likelihood of exploiting best option is proportional to quality of best option found. If best is 1, 10% chance to exploit it. If best is 10 or greater, 100%. If all 0s or -1s, guaranteed explore. 
 
 3 Variations of each:
 A. explore chooses randomly from all nonnegative									- inefficient for strategy 1
 B. explore chooses randomly only from unexplored; if none, choose randomly from nonnegative			- N/A for strategy 1
 C. explore chooses randomly only from unexplored; if none, exploit
 
+
+Results:
+FIRST variants have best tail results - perfect 170s. But A takes 30 trials to get there, BC takes 15t. Linear growth from 90.
+GREEDY variants grow to a shelf (135) in 2 trials, but take a while (~50t) to curve up to 163 and never go much higher than that.
+DECREASING also tail at 163 but with a higher initial shelf (158) that takes longer (10t) to get to.
+PROPORTIONAL tails at 168 with a rounded shelf around (5t, 152).
+
+epdecreasing A I like. Let's try with a little more exploration (5 more trials)
+
 	
+PROP is Quirky because any option with value > 10 will always be exploited. Very arbitrary threshold. (issues with heavy backprop reinforcing a medium-grade option and shutting out a better one). Happened to perform well for this setup, but not generalizable
+
 
 When exploring, 3 possible strategies:
 	Choose randomly from all options (stupid)

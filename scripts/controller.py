@@ -205,6 +205,25 @@ class QController(BaseController):
         rospy.loginfo(rospy.get_caller_id() + "I heard %s ", data.data)
         self.human_input = data.data
 
+    def check_inv(self, action):
+        if action == "br_seat" and self.Inventory["seat"] > 0:
+            return 1
+        if action == "br_back" and self.Inventory["back"] > 0:
+            return 1
+        if action == "br_dowel" and self.Inventory["dowel"] > 0:
+            return 1
+        if action == "br_long_dowel" and self.Inventory["long_dowel"] > 0:
+            return 1
+        if action == "br_front_bracket" and self.Inventory["front_bracket"] > 0:
+            return 1
+        if action == "br_top_bracket" and self.Inventory["top_bracket"] > 0:
+            return 1
+        if action == "br_back_bracket" and self.Inventory["back_bracket"] > 0:
+            return 1
+        if action == "hold":
+            return 1
+        return -1
+
     def update_inv(self, action):
         if action == "br_seat" and self.Inventory["seat"] > 0:
             self.Inventory["seat"] = self.Inventory["seat"] - 1
@@ -216,7 +235,7 @@ class QController(BaseController):
             self.Inventory["dowel"] = self.Inventory["dowel"] - 1
             return 1
         if action == "br_long_dowel" and self.Inventory["long_dowel"] > 0:
-            self.Inventory["dowel"] = self.Inventory["dowel"] - 1
+            self.Inventory["long_dowel"] = self.Inventory["long_dowel"] - 1
             return 1
         if action == "br_front_bracket" and self.Inventory["front_bracket"] > 0:
             self.Inventory["front_bracket"] = self.Inventory["front_bracket"] - 1
@@ -297,7 +316,7 @@ class QController(BaseController):
                 actionid = self.epsilondecreasing(Q[current_state], trial, 'A')  # 2. Use existing Q matrix to pick an action (exploit-explore)
                 action = self.name_action(actionid)                             # string name of action
 
-                if self.update_inv(action) < 0: # check that object is in inventory
+                if self.check_inv(action) < 0: # check that object is in inventory
                     print("considered" + action + "but that object is already used, applying negative feedback and trying something else")
                     Q[current_state][actionid] = -1
                     continue
@@ -312,6 +331,8 @@ class QController(BaseController):
                         print("ERROR: Human accepted invalid action")
                         exit()
                         # !! in the future I could maybe eliminate T matrix and use my own obj state dict to keep track. But not central to project
+
+                    self.update_inv(action)
 
                     # reward = 10
                     # self._robot_speech(sentence='How useful was that?')

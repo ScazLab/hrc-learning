@@ -524,7 +524,6 @@ class QController(BaseController):
                     action, r.response))
         return 0, obj_taken_idx
 
-
 args = parser.parse_args()
 controller = QController(
     path=args.path,

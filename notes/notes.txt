@@ -15,6 +15,7 @@ Optimize this Q learning system and try to get it down to as few trials as possi
 
 
 
+
 Fix string to int conversion in human web interface input 
 
 Add red button on web hi for "Error, I meant to press the red button on bot" to add -1 to matrix. Could use arbitrary state system to allow the transition. But even then that's pointless because it takes the human into states she didn't want to reach, and wastes exploration time on states that will never be revisited. If an action is so bad as to be rejected and never taken again, it should be undone by the robot on the spot.

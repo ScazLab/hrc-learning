@@ -86,13 +86,13 @@ class QController(BaseController):
     TTS_SERVICE = '/svox_tts/speech'
 
     Inventory = {
-        "seat":             1
-        "back":             1
-        "dowel":            6
-        "long_dowel":       1
-        "front_bracket":    2
-        "back_bracket":     2
-        "top_bracket":      2
+        "seat":             1,
+        "back":             1,
+        "dowel":            6,
+        "long_dowel":       1,
+        "front_bracket":    2,
+        "back_bracket":     2,
+        "top_bracket":      2,
     }
 
     # Transition Matrix: (s,a) --> s'
@@ -205,27 +205,27 @@ class QController(BaseController):
         rospy.loginfo(rospy.get_caller_id() + "I heard %s ", data.data)
         self.human_input = data.data
 
-    def update_inv(action):
-        if action == "br_seat" and Inventory["seat"] > 0:
-            Inventory["seat"] = Inventory["seat"] - 1
+    def update_inv(self, action):
+        if action == "br_seat" and self.Inventory["seat"] > 0:
+            self.Inventory["seat"] = self.Inventory["seat"] - 1
             return 1
-        if action == "br_back" and Inventory["back"] > 0:
-            Inventory["back"] = Inventory["back"] - 1
+        if action == "br_back" and self.Inventory["back"] > 0:
+            self.Inventory["back"] = self.Inventory["back"] - 1
             return 1
-        if action == "br_dowel" and Inventory["dowel"] > 0:
-            Inventory["dowel"] = Inventory["dowel"] - 1
+        if action == "br_dowel" and self.Inventory["dowel"] > 0:
+            self.Inventory["dowel"] = self.Inventory["dowel"] - 1
             return 1
-        if action == "br_long_dowel" and Inventory["long_dowel"] > 0
-            Inventory["dowel"] = Inventory["dowel"] - 1
+        if action == "br_long_dowel" and self.Inventory["long_dowel"] > 0:
+            self.Inventory["dowel"] = self.Inventory["dowel"] - 1
             return 1
-        if action == "br_front_bracket" and Inventory["front_bracket"] > 0:
-            Inventory["front_bracket"] = Inventory["front_bracket"] - 1
+        if action == "br_front_bracket" and self.Inventory["front_bracket"] > 0:
+            self.Inventory["front_bracket"] = self.Inventory["front_bracket"] - 1
             return 1
-        if action == "br_top_bracket" and Inventory["top_bracket"] > 0:
-            Inventory["top_bracket"] = Inventory["top_bracket"] - 1
+        if action == "br_top_bracket" and self.Inventory["top_bracket"] > 0:
+            self.Inventory["top_bracket"] = self.Inventory["top_bracket"] - 1
             return 1
-        if action == "br_back_bracket" and Inventory["back_bracket"] > 0:
-            Inventory["back_bracket"] = Inventory["back_bracket"] - 1
+        if action == "br_back_bracket" and self.Inventory["back_bracket"] > 0:
+            self.Inventory["back_bracket"] = self.Inventory["back_bracket"] - 1
             return 1
         if action == "hold":
             return 1
@@ -246,20 +246,20 @@ class QController(BaseController):
         return random.choice(l)
 
     def epsilondecreasing(self, options, trial, var):
-    e = max(.1, (10-trial)/10) # 1, .9, .8, .7, .6, .5, .4, .3, .2, .1, .1, .1, .1, ...
-    r = random.random()
-    if r > e:                        # Exploit: pick (one of) the best
-        return rand_idx_max(options)
-    else:                            # Explore
-        unexplored = [i for i, v in enumerate(options) if v == 0]
-        nonneg     = [i for i, v in enumerate(options) if v >= 0]
-        if var == 'A':
-            return random.choice(nonneg)    # A: pick randomly
-        if unexplored:
-            return random.choice(unexplored) # BC: try to pick from unexplored
-        if var == 'B':
-            return random.choice(nonneg) # B (pick randomly)
-        return rand_idx_max(options)     # C (exploit after all)
+        e = max(.1, (10-trial)/10) # 1, .9, .8, .7, .6, .5, .4, .3, .2, .1, .1, .1, .1, ...
+        r = random.random()
+        if r > e:                        # Exploit: pick (one of) the best
+            return self.rand_idx_max(options)
+        else:                            # Explore
+            unexplored = [i for i, v in enumerate(options) if v == 0]
+            nonneg     = [i for i, v in enumerate(options) if v >= 0]
+            if var == 'A':
+                return random.choice(nonneg)    # A: pick randomly
+            if unexplored:
+                return random.choice(unexplored) # BC: try to pick from unexplored
+            if var == 'B':
+                return random.choice(nonneg) # B (pick randomly)
+            return self.rand_idx_max(options)     # C (exploit after all)
 
     # Full program
     def _run(self):
@@ -292,16 +292,16 @@ class QController(BaseController):
             current_state = STARTSTATE
 
             while (current_state != ENDSTATE):
-                print("state: " + current_state)
+                print("state: " + str(current_state))
                 # begin one state-action step
                 actionid = self.epsilondecreasing(Q[current_state], trial, 'A')  # 2. Use existing Q matrix to pick an action (exploit-explore)
                 action = self.name_action(actionid)                             # string name of action
-                
-                if update_inv(action) < 0: # check that object is in inventory
+
+                if self.update_inv(action) < 0: # check that object is in inventory
                     print("considered" + action + "but that object is already used, applying negative feedback and trying something else")
                     Q[current_state][actionid] = -1
                     continue
-                
+
                 green, obj_taken_idx = self.take_action(action) # 3. Perform action up until human feedback
 
                 if green:       # success

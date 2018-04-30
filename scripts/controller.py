@@ -205,6 +205,15 @@ class QController(BaseController):
         rospy.loginfo(rospy.get_caller_id() + "I heard %s ", data.data)
         self.human_input = data.data
 
+    def reset_inv(self):
+        self.Inventory["seat"] = 1
+        self.Inventory["back"] = 1
+        self.Inventory["dowel"] = 6
+        self.Inventory["long_dowel"] = 1
+        self.Inventory["front_bracket"] = 2
+        self.Inventory["back_bracket"] = 2
+        self.Inventory["top_bracket"] = 2
+
     def check_inv(self, action):
         if action == "br_seat" and self.Inventory["seat"] > 0:
             return 1
@@ -290,14 +299,20 @@ class QController(BaseController):
         # speech test
         self._robot_speech(sentence='Ready to go!')
 
-        # pickle test
-        foo = {'few' : 'bar'}
-        with open('fb.pickle', 'wb') as handle:
-            pickle.dump(foo, handle, protocol=2)
+        # try to load a Q matrix
+        print("checking for existing Q matrix file \'qload.pickle\'...")
+        try:
+            with open('qload.pickle', 'rb') as handle:
+                Q = pickle.load(handle)
+            print("Successfully loaded Q matrix:")
+            print(Q)
+        except:
+            Q = [[0 for j in range(NACTIONS)] for i in range(NSTATES)] # Initialize matrix Q to 0s
+            print("No existing Q matrix found; starting from scratch.")
+
+        trial = 0
 
         print("Starting learning iterations...")
-        Q = [[0 for j in range(NACTIONS)] for i in range(NSTATES)] # Initialize matrix Q to 0s
-        trial = 0
 
         while (True):    # keep running trials until user says to stop
             self._robot_speech(sentence='Are you ready?')
@@ -306,7 +321,7 @@ class QController(BaseController):
                 break
 
             # begin trial
-            trial = trial + 1
+            self.reset_inv()
             eps = max(0.1, 1/(trial+1))
             current_state = STARTSTATE
 
@@ -354,13 +369,16 @@ class QController(BaseController):
                 print("done with state-action step")
                 print(Q)
 
-            print("done with trial (reached end state)")
+            # save q matrix
+            print("Storing Q matrix as \'q" + str(trial) + ".pickle\'")
+            with open('q' + str(trial) + '.pickle', 'wb') as handle:
+                pickle.dump(Q, handle, protocol=2)
+
+            print("done with trial" + str(trial))
+            trial = trial + 1
             self._robot_speech(sentence='Finished!')
 
         print("done with all trials (user decided to quit)")
-        print("Storing Q matrix as q.pickle")
-        with open('q.pickle', 'wb') as handle:
-            pickle.dump(Q, handle, protocol=2)
         print("Rospy signal shutdown")
         self._robot_speech(sentence='Goodbye!')
         rospy.signal_shutdown("End of task.")

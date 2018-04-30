@@ -274,11 +274,13 @@ class QController(BaseController):
         return random.choice(l)
 
     def epsilondecreasing(self, options, trial, var):
-        e = max(.1, (10-trial)/10) # 1, .9, .8, .7, .6, .5, .4, .3, .2, .1, .1, .1, .1, ...
+        e = max(.1, (10-trial)/10.0) # 1, .9, .8, .7, .6, .5, .4, .3, .2, .1, .1, .1, .1, ...
         r = random.random()
         if r > e:                        # Exploit: pick (one of) the best
+            print("EXPLOITING")
             return self.rand_idx_max(options)
         else:                            # Explore
+            print("EXPLORING")
             unexplored = [i for i, v in enumerate(options) if v == 0]
             nonneg     = [i for i, v in enumerate(options) if v >= 0]
             if var == 'A':

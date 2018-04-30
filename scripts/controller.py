@@ -310,7 +310,7 @@ class QController(BaseController):
             Q = [[0 for j in range(NACTIONS)] for i in range(NSTATES)] # Initialize matrix Q to 0s
             print("No existing Q matrix found; starting from scratch.")
 
-        trial = 0
+        trial = 1
 
         print("Starting learning iterations...")
 

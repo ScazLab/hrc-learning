@@ -1,0 +1,47 @@
+----------------------------------------------------
+CPSC 490 senior project
+Training a Robot to Collaborate with a Human Partner
+Michael Van der Linden
+----------------------------------------------------
+
+Github
+https://github.com/ScazLab/hrc-learning
+
+Project page (Yale network or VPN only)
+http://zoo.cs.yale.edu/classes/cs490/17-18b/vanderlinden.michaeljohn.mjv36/
+
+
+Using the controller
+--------------------
+
+Setup:
+Install catkin package in ros_devel_ws.
+Copy launch, scripts, and web_interface folder into package directory.
+launch/ contains hrc-_learning.launch which launches base HRC controller.
+web_interface/ contains user interfac for nuanced feedback. Open hrc_learning.html in a browser to use.
+scripts/ contains controller.py which runs the learning and robot behavior.
+
+The controller will first check for an existing Q matrix 'qload.pickle'. This allows the user to load a matrix stored from previous trials.
+If 'qload.pickle' is not found, controller will generate a new matrix from scratch.
+At the end of each trial, the controller will save a snapshot of the current Q matrix as 'q[trial number].pickle'. The user can use these snapshots to load the robot from a certain state later on.
+
+At the beginning of the interaction, the user is asked to input any rating through the web interface to test that rosbridge is connected. At the beginning of each trial, the user can press 'y' to continue or any other key to exit.
+
+The robot interaction procedure is described in the project report. At each step in a trial, the robot tries an action. The user can accept or reject the action with the green or red buttons on the robot's "wrist." If the user accepts the action, the trial advances, and the user is then prompted to rate the action through the web interface. This feedback drives the Q-learning process.
+
+The robot will vocalize its actions and 'thoughts' ("I will never do that again", "I think I can do better next time", etc), but I commented out most of the text-to-speech commands because they were hard to understand and they slowed down the trials as the robot stops to talk.
+
+Currently, the robot is limited to states within the hierarchical task model of the chair assembly task. It has no knowledge of the model, but it transitions from state to state through dead reckoning and I only encoded the state transitions that were reachable within the HTM (counting on the user to reject actions that would take the trial outside the HTM). Within the model, the user is free to express any preferences they like.
+
+Currently, the controller is set to use the epsilon-decreasing strategy, variant 'A' (see report). I've included a python module containing each of the exploit-explore strategies used in my simulations, so users are free to choose another.
+
+
+Evaluation
+----------
+This is a simple learning controller intended to be a demonstration that well-tuned Q-learning can drive fast learning through live trials in a human-robot collaborative task. As such, it is limited to the test domain of the chair assembly task that the underlying HRC controller is based on.
+
+One improvement that I would have made given more time is generalizing the state transition system. Instead of a handcoded transition matrix limited to the states reachable within the HTM, the robot should really be keeping track of states as a vector of parts on the table, with a function to modify that vector based on each successfully completed action. The Q matrix would then be a dictionary indexed by state vectors. This system would be a huge improvement because it would allow users to set their own rules about which actions are legal in which contexts. They would still be bounded by the physical parts, but not by the arbitrary rules of the existing HTM.
+
+A great opportunity for future work would be to come up with a task that has the opportunity for more nuanced learning. Currently, the Q matrix tends to reflect the simple immediate reward inputs, because the nature of human preferences is that they are consistent along a particular branch of a possible workflow. Q learning is capable of considering future rewards even when immediate rewards are low, but in this task it doesn't usually have to, since humans already think ahead and don't deliberately undervalue current actions that would eventually lead to better states. (Even working with indecisive or capricious human partners would not lead to more nuanced learning, since the present-future imbalance must be consistent to be factored in). A task that balances feedback from multiple sources - for example, a human preference and some external cost (perhaps representing the monetary cost of raw materials in a factory) - would lead to more nuanced learning. Then, the robot would realistically encounter situations where seemingly bad current actions lead to excellent future outcomes, which Q-learning is designed to exploit.
+
+This demonstration performs well on the "decent first, refined later" philosophy I set out to follow. It learns the rules of the task quickly to get up to a productive level of competence within a few trials. From there, it gradually learns the human partner's preferences to further refine its performance. My primary goal was to be able to sit down with the robot and have it demonstrate competence after a live training session, which would have to be relatively few trials since it would not be a simulation. This was exceeded, as the robot proved it could learn and perform the task competently at the same time. I did not have to spend many hours patiently working through trials to get the robot to a tolerable level of performance; we were able to assemble the chair right from the start, and our third trial took half the time of our first.

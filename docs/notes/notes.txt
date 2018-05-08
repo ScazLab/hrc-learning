@@ -92,10 +92,6 @@ PROPORTIONAL tails at 168 with a rounded shelf around (5t, 152).
 epdecreasing A I like. Let's try with a little more exploration (15 instead of 10 to .1)
 Result: slightly higher initial shelf, but takes longer to get there. 10 is better.
 
-******************************************************
-******I WILL RUN EPSILON DECREASING A WITH BAXTER*****
-******************************************************
-
 Eventually we can uncomment the text-to-speech stuff for the final demo afer Q is built
 Improvement: make it so baxter remem
 	

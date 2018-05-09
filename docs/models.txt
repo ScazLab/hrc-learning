@@ -12,11 +12,6 @@ HTM:
 gL0 gL1 gL2 gL3                         gS0 gS1
 
 
-My preferences:
-I want back first
-When getting back parts, I want top brackets before dowels
-When getting legs, I want brackets before dowels and back brackets before front brackets
-
 	HTM has ten leaves:
 	0. gL0 - grab dowel, grab front bracket
 	1. gL1 - grab dowel, grab front bracket
@@ -50,14 +45,6 @@ When getting legs, I want brackets before dowels and back brackets before front 
 	Back subassembly
 	Chair
 
-These are the parts that the robot could reasonably see with computer vision.
-Their presence or absence on table are the only inputs it will be able to get from the environment.
-There are 6 dowels total but only 4 can be individually on table at once, so we only go up to 4.
-
-Leaves are vectors of parts on the table (there or not there)
-Leaves are sparse, because we are only dealing with the states that are reachable within the HTM
-(eg. we'd never have long dowel, seat, and dowel on the table)
-There is no binary counting (for dowels) b/c would only save 1 bit; every bit is just presence or absence of part.
 
 Leaf bitmap:
 		[ 15| 14| 13| 12| 11| 10| 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 ]
@@ -208,12 +195,28 @@ Rows are states, columns are actions
 70	chair 					:	-1, -1, -1, -1, -1, -1, -1, -1
 
 
+
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ PREFERENCE-DRIVEN REWARDS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-My preferences:
+MY PREFERENCES:
+---------------
 I want to do back subassembly first, and I want back before long dowel
 When getting back parts, I want top brackets before dowels
 When getting legs, I want brackets before dowels and back brackets before front brackets
+
+
+Reward   | Input
+---------|------
+-1/inv   | Red button
+1 (ok)   | Green button + 1 in web interface
+2 (ok+)  | Green button + 2 in web interface
+3 (+++)  | Green button + 3 in web interface
+4 (++++) | Green button + 4 in web interface
+etc
+
+During live trials, I simply followed the above rules to express my preferences.
+During simulations, I used the reward matrix below.
 
 								dl  fb  bb  st  tb  ld  bk  hd
 							----------------------------------
@@ -265,7 +268,7 @@ When getting legs, I want brackets before dowels and back brackets before front 
 45	bs, 1 dl, 1 fb, 1 bb 	:	10, -1, -1, -1, -1, -1, -1, -1
 46	bs, 2 dl, 2 fb 			:	 3, -1, 10, -1, -1, -1, -1, -1
 47	bs, 2 dl, 2 bb 			:	 3, 10, -1, -1, -1, -1, -1, -1
-48	bs, 2 dl, 1 fb, 1 bb 	:	 3,  5, 10, -1, -1, -1, -1, -1  ### somehow these two rows are generating high Q values in col 1 (fb). Some future reward is accumulating there.
+48	bs, 2 dl, 1 fb, 1 bb 	:	 3,  5, 10, -1, -1, -1, -1, -1
 49	bs, 3 dl, 2 fb 			:	-1, -1, 10, -1, -1, -1, -1, -1
 50	bs, 3 dl, 2 bb 			:	-1, 10, -1, -1, -1, -1, -1, -1
 51	bs, 3 dl, 1 fb, 1 bb 	:	-1,  3, 10, -1, -1, -1, -1, -1
@@ -289,12 +292,11 @@ When getting legs, I want brackets before dowels and back brackets before front 
 69	ss, 2 dl, 2 tb, ld, bk	:	-1, -1, -1, -1, -1, -1, -1, 10	^-------------------------------------------------^
 70	chair 					:	-1, -1, -1, -1, -1, -1, -1, -1
 
+
 Each action, if correct, would transition the task into a new valid state. Incorrect actions are cancelled by human (no progress in task)
 
-The Q-learning formula depends on being able to estimate the future value, which is max{a}(Q[state at next time step]).
-Some of the actions lead to a valid next state. For those, we can provide a transition table. For those that don't, max{a}(Q[next state]) = -1
-The whole system is a little contrived right now because the reward matrix basically provides binary rewards. So future rewards dont't
-really need to be taken into account. But humans with sophisticated preferences could add nuance to the valid actions and provide real learning.
+
+
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ TRANSITION MATRIX (S,A --> S') ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -371,133 +373,4 @@ really need to be taken into account. But humans with sophisticated preferences 
 68	ss, 2 dl, 2 tb, bk 		:	-1, -1, -1, -1, -1, 69, -1, -1
 69	ss, 2 dl, 2 tb, ld, bk	:	-1, -1, -1, -1, -1, -1, -1, 70	^-------------------------------------------------^
 70	chair 					:	-1, -1, -1, -1, -1, -1, -1, -1
-
-
-
-Reward   | Input
----------|------
--1/inv   | Red button
-1 (ok)   | 1 green push
-2 (ok+)  | 2 green pushes
-3 (+++)  | 3 green pushes
-4 (++++) | 4 green pushes
-etc
-
-
-
-
-Reward matrix with +/-/0 reward for every state transition ('inv' for invalid transitions)
-R = [['inv', 'inv', 'inv', 'inv',     0,  'inv'],
- 	 ['inv', 'inv', 'inv',     0, 'inv',    100],
- 	 ['inv', 'inv', 'inv',     0, 'inv',  'inv'],
- 	 ['inv',     0,     0, 'inv',     5,  'inv'], # [3,4] was 0
- 	 [    0, 'inv', 'inv',     0, 'inv',    100],
- 	 ['inv',     0, 'inv', 'inv',     0,    100]]
-Slightly altered sample graph from http://mnemstudio.org/path-finding-q-learning-tutorial.htm
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Q matrix after first trial
-
-								dl  fb  bb  st  tb  ld  bk  hd
-							----------------------------------
-0	nothing					:	 1,  0,  0,  0,  0,  0,  0,  0
-1	1 dowel					:	-1,  0,  5,  0,  0,  0, -1,  0	v----- seat in progress -----v
-2	1 fb 					:	 0,  0,  0,  0,  0,  0,  0,  0
-3	1 bb 					:	 0,  0,  0,  0,  0,  0,  0,  0
-4	1 dl, 1 fb 				:	 0,  0,  0,  0,  0,  0,  0,  0
-5	1 dl, 1 bb 				:	 0,  0, 10,  0,  0,  0,  0, -1
-6	2 dl, 1 fb 				:	 0,  0,  0,  0,  0,  0,  0,  0
-7	2 dl, 1 bb 				:	 0,  0,  0,  0,  0,  0,  0,  0
-8	1 dl, 2 fb 				:	 0,  0,  0,  0,  0,  0,  0,  0
-9	1 dl, 2 bb 				:	10,  0,  0, -1,  0, -1,  0, -1
-10	1 dl, 1 fb, 1 bb 		:	 0,  0,  0,  0,  0,  0,  0,  0
-11	2 dl, 2 fb 				:	 0,  0,  0,  0,  0,  0,  0,  0
-12	2 dl, 2 bb 				:	 3,  0,  0,  0,  0,  0,  0,  0
-13	2 dl, 1 fb, 1 bb 		:	 0,  0,  0,  0,  0,  0,  0,  0
-14	3 dl, 2 fb 				:	 0,  0,  0,  0,  0,  0,  0,  0
-15	3 dl, 2 bb 				:	 0, 10,  0,  0,  0,  0,  0,  0
-16	3 dl, 1 fb, 1 bb 		:	 0,  0,  0,  0,  0,  0,  0,  0
-17	2 dl, 2 fb, 1 bb 		:	 0,  0,  0,  0,  0,  0,  0,  0
-18	2 dl, 1 fb, 2 bb 		:	 0,  0,  0,  0,  0,  0,  0,  0
-19	3 dl, 2 fb, 1 bb 		:	 0,  0,  0,  0,  0,  0,  0,  0
-20	3 dl, 1 fb, 2 bb 		:	 0, 10,  0, -1, -1, -1, -1, -1
-21	4 dl, 2 fb, 1 bb 		:	 0,  0,  0,  0,  0,  0,  0,  0
-22	4 dl, 1 fb, 2 bb 		:	 0,  0,  0,  0,  0,  0,  0,  0
-23	3 dl, 2 fb, 2 bb 		:	10,  0,  0,  0, -1,  0,  0, -1
-24	4 dl, 2 fb, 2 bb 		:	-1,  0,  0, 10, -1, -1, -1, -1
-25	4 dl, 2 fb, 2 bb, st 	:	-1,  0,  0,  0,  0, -1, -1, 10
-26	seat subassembly		:	 5,  0,  0,  0,  0, -1, -1, -1	^------------------------------^
-27	1 tb 					:	 0,  0,  0,  0,  0,  0,  0,  0	v------ back in progress ------v
-28	1 dl, 1 tb 				:	 0,  0,  0,  0,  0,  0,  0,  0
-29	1 dl, 2 tb 				:	 0,  0,  0,  0,  0,  0,  0,  0
-30	2 dl, 1 tb 				:	 0,  0,  0,  0,  0,  0,  0,  0
-31	2 dl, 2 tb 				:	 0,  0,  0,  0,  0,  0,  0,  0
-32	2 dl, 2 tb, ld 			:	 0,  0,  0,  0,  0,  0,  0,  0
-33	2 dl, 2 tb, bk 			:	 0,  0,  0,  0,  0,  0,  0,  0
-34	2 dl, 2 tb, ld, bk 		:	 0,  0,  0,  0,  0,  0,  0, 10
-35	back subassembly 		:	 0,  0,  0,  0,  0,  0,  0,  0	^------------------------------^
-36	bs, 1 dl				:	 0,  0,  0,  0,  0,  0,  0,  0	v------ back subassembly + seat in progress ------v
-37	bs, 1 fb 				:	 0,  0,  0,  0,  0,  0,  0,  0
-38	bs, 1 bb 				:	 0,  0,  0,  0,  0,  0,  0,  0
-39	bs, 1 dl, 1 fb 			:	 0,  0,  0,  0,  0,  0,  0,  0
-40	bs, 1 dl, 1 bb 			:	 0,  0,  0,  0,  0,  0,  0,  0  ###
-41	bs, 2 dl, 1 fb 			:	 0,  0,  0,  0,  0,  0,  0,  0
-42	bs, 2 dl, 1 bb 			:	 0,  0,  0,  0,  0,  0,  0,  0
-43	bs, 1 dl, 2 fb 			:	 0,  0,  0,  0,  0,  0,  0,  0
-44	bs, 1 dl, 2 bb 			:	 0,  0,  0,  0,  0,  0,  0,  0
-45	bs, 1 dl, 1 fb, 1 bb 	:	 0,  0,  0,  0,  0,  0,  0,  0
-46	bs, 2 dl, 2 fb 			:	 0,  0,  0,  0,  0,  0,  0,  0
-47	bs, 2 dl, 2 bb 			:	 0,  0,  0,  0,  0,  0,  0,  0
-48	bs, 2 dl, 1 fb, 1 bb 	:	 0,  0,  0,  0,  0,  0,  0,  0  ### somehow these two rows are generating high Q values in col 1 (fb). Some future reward is accumulating there.
-49	bs, 3 dl, 2 fb 			:	 0,  0,  0,  0,  0,  0,  0,  0
-50	bs, 3 dl, 2 bb 			:	 0,  0,  0,  0,  0,  0,  0,  0
-51	bs, 3 dl, 1 fb, 1 bb 	:	 0,  0,  0,  0,  0,  0,  0,  0
-52	bs, 2 dl, 2 fb, 1 bb 	:	 0,  0,  0,  0,  0,  0,  0,  0
-53	bs, 2 dl, 1 fb, 2 bb 	:	 0,  0,  0,  0,  0,  0,  0,  0
-54	bs, 3 dl, 2 fb, 1 bb 	:	 0,  0,  0,  0,  0,  0,  0,  0
-55	bs, 3 dl, 1 fb, 2 bb 	:	 0,  0,  0,  0,  0,  0,  0,  0
-56	bs, 4 dl, 2 fb, 1 bb 	:	 0,  0,  0,  0,  0,  0,  0,  0
-57	bs, 4 dl, 1 fb, 2 bb 	:	 0,  0,  0,  0,  0,  0,  0,  0
-58	bs, 3 dl, 2 fb, 2 bb 	:	 0,  0,  0,  0,  0,  0,  0,  0
-59	bs, 4 dl, 2 fb, 2 bb 	:	 0,  0,  0,  0,  0,  0,  0,  0
-60	bs, 4 dl, 2 fb, 2 bb, st:	 0,  0,  0,  0,  0,  0,  0, 10	^-------------------------------------------------^
-61	ss, 1 dl 				:	 0,  0,  0,  0, 10, -1,  0,  0	v------ seat subassembly + back in progress ------v
-62	ss, 1 tb 				:	 0,  0,  0,  0,  0,  0,  0,  0
-63	ss, 1 dl, 1 tb 			:	 0,  0,  0,  0, 10,  0, -1, -1
-64	ss, 1 dl, 2 tb 			:	10,  0,  0,  0,  0,  0,  0,  0
-65	ss, 2 dl, 1 tb 			:	 0,  0,  0,  0,  0,  0,  0,  0
-66	ss, 2 dl, 2 tb 			:	 0,  0,  0,  0,  0,  0, 10, -1
-67	ss, 2 dl, 2 tb, ld 		:	 0,  0,  0,  0,  0,  0,  0,  0
-68	ss, 2 dl, 2 tb, bk 		:	 0,  0,  0,  0,  0, 10,  0,  0
-69	ss, 2 dl, 2 tb, ld, bk	:	 0,  0,  0,  0,  0,  0,  0, 10	^-------------------------------------------------^
-70	chair 					:	 0,  0,  0,  0,  0,  0,  0,  0
-
-
 

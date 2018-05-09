@@ -11,9 +11,22 @@ Project page (Yale network or VPN only)
 http://zoo.cs.yale.edu/classes/cs490/17-18b/vanderlinden.michaeljohn.mjv36/
 
 
+Using the simulator
+-------------------
+sim/ contains a python module that runs the simulation with which I tested the four exploit-explore strategies.
+
+It simulates a series of trials identical to the live interactions, using a reward matrix inside the module in place of human feedback.
+It simulates repeated interactions with the robot using various exploit-explore strategies and logs the results. It runs 12 sets of 250 iterations of 250 trials, 1 set for each variation of each strategy. The quality of the robot's performance for each trial in each iteration is logged in a csv file. Each row is an iteration, and one csv file is generated for each set. Additionally, one Q matrix is exported at the end of the last iteration in the set, reflecting the typical final Q matrix after 250 trials with that strategy-variant combination.
+
+I intentionally did not check for full convergence, beause defining success as "the Q-matrix has converged" doesn't fit the "decent-first, refined later" strategy. Declaring that the robot has 'learned' the task only after the Q-matrix has converged does not give credit to its ability in earlier trials. Some of these strategies would take many more trials to converge in the regions of the Q-matrix corresponding to undesirable actions, and we don't want to falsely incentivize the robot to explore them. Our goal is simply to see the robot's performance approach that of an optimal partner.
+
+$ python3 sim.py to run the simulator
+
+models.txt contains all the labeled matrices, preferences and state information that I used to conceptualize the simulation and live trials.
+
+
 Using the controller
 --------------------
-
 Setup:
 Install catkin package in ros_devel_ws.
 Copy launch, scripts, and web_interface folder into package directory.
